@@ -1,0 +1,56 @@
+[tool.poetry]
+name = "pocket_assist_backend"
+version = "0.8.0"
+description = "Backend of PocketAssist."
+authors = ["Tsunghua Tsai <tsai.tsunghua@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+httpx = "0.28.1"
+langchain = "0.3.20"
+langchain-community = "0.3.19"
+langchain-core = "0.3.46"
+langchain-openai = "0.3.8"
+langchain-text-splitters = "0.3.6"
+langgraph = "^0.4.8"
+line-bot-sdk = "3.16.1"
+numpy = "1.26.4"
+openai = "1.66.2"
+psutil = "5.9.5"
+pydantic = "2.10.6"
+pygments = "2.19.1"
+python-dateutil = "2.9.0.post0"
+python-dotenv = "1.0.1"
+pyyaml = "6.0.2"
+regex = "2024.11.6"
+requests = "2.32.3"
+requests-toolbelt = "1.0.0"
+six = "1.17.0"
+sqlalchemy = "2.0.39"
+supabase = "^2.15.1"
+tqdm = "4.67.1"
+typer = "0.15.2"
+watchfiles = "1.0.4"
+websockets = "14.0.0"
+fastapi = "0.112.4"
+uvicorn = "0.31.1"
+unstructured = "^0.17.2"
+chromadb = "^0.6.3"
+google-cloud-storage = "^3.1.0"
+python-multipart = "^0.0.20"
+resend = "^2.11.0"
+email-validator = "^2.2.0"
+pytz = "^2025.2"
+cryptography = "^45.0.5"
+
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"

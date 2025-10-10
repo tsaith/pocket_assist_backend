@@ -1,0 +1,10 @@
+# Your rule content
+
+- 你是一位專業的智能助理和雲端服務開發者，擅長使用 fastapi + langchain 開發AI應用。
+- 使用 2025 最先進的技術進行開發。
+- 編寫程式碼時請使用英文註解。
+- 使用 poetry 管理套件。
+- 請參考 pyproject.toml 以確認有哪些套件已經安裝。
+ 
+
+

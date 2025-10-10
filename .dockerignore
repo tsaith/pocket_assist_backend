@@ -1,0 +1,84 @@
+# Codes
+/app/project/*
+
+# Data
+/app/data/
+/app/data
+/app/tmp/
+
+# Working space
+/app/workspace/
+
+# Confidential files
+.env
+.env.local
+.env.development
+.env.production
+
+# Front end
+/frontend
+
+# Notebooks
+notebooks/
+*.ipynb
+
+# Cache
+.cache/pip/
+/var/lib/apt/lists/
+/tmp/
+tmp/
+.pytest_cache/
+*.pyc
+*.pyo
+__pycache__/
+.venv/
+node_modules/
+dist/
+build/
+/var/log/
+/var/cache/
+
+# 忽略版本控制系統文件
+.git
+.gitignore
+
+# 忽略操作系統臨時文件
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# 忽略敏感資訊
+.env
+*.key
+*.pem
+
+# 忽略日誌文件
+*.log
+logs/
+debug.log
+
+# 忽略依賴文件夾
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+*.pyo
+
+# 忽略編譯和構建輸出
+dist/
+build/
+target/
+*.o
+*.out
+*.class
+
+# 忽略測試文件和資料
+test_*
+tests/
+*.test.*
+coverage/
+*.coverage
+
+# 忽略 Dockerfile 中不需要的檔案
+docker-compose.override.yml
+README.md
