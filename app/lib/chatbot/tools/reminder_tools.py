@@ -3,10 +3,6 @@ from datetime import datetime, timedelta, timezone
 from langchain_core.tools import StructuredTool
 
 from app.lib.supabase import supabase_admin
-from app.lib.chatbot.utils import (
-    convert_utc_to_taiwan_time,
-    convert_taiwan_to_utc_time
-)
 from app.lib.utils.time_utils import (
     convert_user_local_to_utc_time,
     convert_utc_to_user_local_time
@@ -75,7 +71,7 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
                 return f"錯誤：時間格式不正確，請使用格式 YYYY-MM-DDTHH:MM:SS+HH:MM，錯誤詳情：{str(e)}"
             
             # 驗證 method 是否在允許的值中
-            valid_methods = ['notification', 'app', 'line', 'email']
+            valid_methods = ['notification', 'notification-long']
             if method not in valid_methods:
                 return f"錯誤：method 必須是 {', '.join(valid_methods)} 其中之一"
             
@@ -121,7 +117,7 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
                 "is_recurring": is_recurring,
                 "status": status
             }
-            
+
             # 添加可選欄位
             if recurrence_rule:
                 insert_data["recurrence_rule"] = recurrence_rule

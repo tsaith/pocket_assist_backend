@@ -8,10 +8,10 @@ def create_get_user_tier_tool(user_id: str) -> StructuredTool:
     
     def get_user_tier() -> str:
         """
-        獲取用戶的訂閱層級
+        獲取訂閱層級
         
         Returns:
-            str: 用戶的訂閱層級和相關資訊
+            str: 訂閱層級和相關資訊
         """
         try:
             subscription_manager = UserSubscriptionManager(user_id)
@@ -35,7 +35,7 @@ Feature Limits:
 - Bookkeeping Records: {bookkeeping_display}
 """
             
-            print(f"主人的訂閱層級：{tier}")
+            print(f"訂閱層級：{tier}")
             return result
             
         except Exception as e:
@@ -46,7 +46,7 @@ Feature Limits:
     get_user_tier_tool = StructuredTool.from_function(
         func=get_user_tier,
         name="get_user_tier",
-        description="獲取主人的訂閱層級（free, pro, vip, vvip）以及各項功能的限制資訊。",
+        description="查詢訂閱層級（free, pro, vip, vvip）以及各項功能的限制資訊。",
         return_direct=False
     )
     

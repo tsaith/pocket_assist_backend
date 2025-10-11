@@ -20,7 +20,7 @@ class ChatbotManager:
         self.lock = threading.RLock()
         
         # 清理配置
-        self.max_idle_time = 18000  # 5 小時未使用的實例將被清理
+        self.max_idle_time = 1800  # 30 分鐘未使用的實例將被清理
         self.cleanup_interval = 600  # 清理線程每10分鐘檢查一次
         
         # 清理線程控制
