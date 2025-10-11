@@ -2,14 +2,13 @@ from typing import List, Tuple
 from langchain_core.tools import StructuredTool
 
 from app.lib.supabase import supabase_admin
-from app.lib.chatbot.utils import (
-    convert_utc_to_taiwan_time,
-    convert_taiwan_to_utc_time
+
+from app.lib.utils.time_utils import (
+    convert_user_local_to_utc_time,
+    convert_utc_to_user_local_time
 )
-from app.lib.user_subscription_manager import (
-    UserSubscriptionManager,
-    SubscriptionFeature
-)
+
+from app.core.constants import Constants
 
 def create_create_note_tool(user_id: str) -> StructuredTool:
     """創建添加筆記工具"""
@@ -19,8 +18,6 @@ def create_create_note_tool(user_id: str) -> StructuredTool:
 
         print(f"添加筆記：Title {title}, Content {content}")
         try:
-            # 檢查訂閱限制
-            subscription_manager = UserSubscriptionManager(user_id)
             
             # 查詢當前用戶的筆記數量
             notes_response = supabase_admin.from_("notes").select("id", count="exact").eq("user_id", user_id).execute()
@@ -29,10 +26,9 @@ def create_create_note_tool(user_id: str) -> StructuredTool:
             print(f"當前筆記數量：{current_notes_count}")
             
             # 檢查是否超過限制
-            if subscription_manager.is_limit_reached(SubscriptionFeature.NOTES, current_notes_count):
-                limit_message = subscription_manager.get_limit_message(SubscriptionFeature.NOTES, current_notes_count)
-                print(f"超過訂閱限制：{limit_message}")
-                return f"無法新增筆記：{limit_message}"
+            if current_notes_count >= Constants.NOTES_MAX:
+                print(f"無法新增筆記：超過訂閱限制：{Constants.NOTES_MAX}")
+                return f"無法新增筆記：超過訂閱限制：{Constants.NOTES_MAX}"
             
             # 檢查是否已存在相同的 title 組合
             response = supabase_admin.from_("notes").select("*").eq("user_id", user_id).eq("title", title).execute()
@@ -248,12 +244,19 @@ def create_search_notes_by_time_tool(user_id: str) -> StructuredTool:
     def search_notes_by_time(start_at: str, end_at: str) -> str:
         """搜尋智能助理的筆記內容，根據時間範圍搜尋 created_at 或 updated_at 介於指定時間之間的筆記"""
 
-        start_at_utc = convert_taiwan_to_utc_time(start_at)
-        end_at_utc = convert_taiwan_to_utc_time(end_at)
-
         print(f"根據時間範圍搜尋筆記 from user_id：{user_id}, start_at：{start_at}, end_at：{end_at}")
         content = ""
         try:
+            # 使用時間轉換函數，將用戶本地時間轉換為 UTC
+            start_at_utc, start_info = convert_user_local_to_utc_time(user_id, start_at)
+            end_at_utc, end_info = convert_user_local_to_utc_time(user_id, end_at)
+            
+            # 檢查時間轉換是否成功
+            if "error" in start_info or "error" in end_info:
+                return f"時間轉換失敗，請確認時間格式是否正確"
+            
+            print(f"start_at_utc：{start_at_utc}, end_at_utc：{end_at_utc}")
+            
             # 使用 or_ 和 gte/lte 進行時間範圍搜尋，搜尋 created_at 或 updated_at 介於指定時間之間的筆記
             response = supabase_admin.from_("notes").select("id, title, content, created_at, updated_at").eq("user_id", user_id).or_(f"created_at.gte.{start_at_utc},created_at.lte.{end_at_utc},updated_at.gte.{start_at_utc},updated_at.lte.{end_at_utc}").execute()
             

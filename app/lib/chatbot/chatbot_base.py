@@ -61,7 +61,8 @@ from app.lib.chatbot.tools import (
     create_search_reminders_by_keyword_tool,
     create_search_reminder_by_time_tool,
     create_update_reminder_tool,
-    create_delete_reminder_tool
+    create_delete_reminder_tool,
+    create_get_user_tier_tool
 )
 
 from app.lib.user_time_manager import UserTimeManager
@@ -72,8 +73,8 @@ class ChatbotBase:
     基礎 Chatbot 類，封裝 langchain 相關邏輯
     """
     
-    #def __init__(self, model: str = "gpt-4o-mini"):
-    def __init__(self, model: str = "gpt-4o"):
+    def __init__(self, model: str = "gpt-4o-mini"):
+    #def __init__(self, model: str = "gpt-4o"):
         """
         初始化 Agent
         
@@ -253,6 +254,9 @@ class ChatbotBase:
         # 創建設定用戶提醒方式工具
         set_user_reminder_method_tool = create_set_user_reminder_method_tool(user_id)
 
+        # 創建獲取用戶訂閱層級工具
+        get_user_tier_tool = create_get_user_tier_tool(user_id)
+
         # 設置工具列表
         self.tools = [
             get_user_language_tool,
@@ -263,6 +267,7 @@ class ChatbotBase:
             set_user_timezone_tool,
             get_user_current_time_tool,
             get_user_weekday_tool,
+            get_user_tier_tool,
             read_reminder_tool,
             read_reminders_tool,
             search_reminders_by_keyword_tool,
@@ -378,6 +383,15 @@ class ChatbotBase:
 
         當呼叫時間相關工具時，使用的參數必須是英文或數字，不要使用中文。
 
+        當需要新增提醒或筆記時，一定要真的呼叫工具來新增，
+        不可以因為之前被告知是免費用戶就不嘗試新增。
+
+        當需要新增提醒或筆記時，一定要真的呼叫工具來新增，
+        不可以因為之前被告知是免費用戶就不嘗試新增。
+
+        當需要新增提醒或筆記時，一定要真的呼叫工具來新增，
+        不可以因為之前被告知是免費用戶就不嘗試新增。
+        
         """
 
         # 設置記憶體

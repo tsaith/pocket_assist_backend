@@ -11,10 +11,7 @@ from app.lib.utils.time_utils import (
     convert_user_local_to_utc_time,
     convert_utc_to_user_local_time
 )
-from app.lib.user_subscription_manager import (
-    UserSubscriptionManager,
-    SubscriptionFeature
-)
+from app.core.constants import Constants
 
 
 def create_create_reminder_tool(user_id: str) -> StructuredTool:
@@ -86,9 +83,6 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
             if is_recurring and not recurrence_rule:
                 return f"錯誤：設定為重複提醒時必須提供 recurrence_rule"
             
-            # 檢查訂閱限制
-            subscription_manager = UserSubscriptionManager(user_id)
-            
             # 查詢當前用戶的提醒數量（只計算 active 狀態的提醒）
             reminders_response = supabase_admin.from_("reminders").select("id", count="exact").eq("user_id", user_id).eq("status", "active").execute()
             current_reminders_count = reminders_response.count if reminders_response.count is not None else 0
@@ -96,10 +90,9 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
             print(f"當前提醒數量：{current_reminders_count}")
             
             # 檢查是否超過限制
-            if subscription_manager.is_limit_reached(SubscriptionFeature.REMINDERS, current_reminders_count):
-                limit_message = subscription_manager.get_limit_message(SubscriptionFeature.REMINDERS, current_reminders_count)
-                print(f"超過訂閱限制：{limit_message}")
-                return f"無法新增提醒：{limit_message}"
+            if current_reminders_count >= Constants.REMINDERS_MAX:
+                print(f"無法新增提醒：超過訂閱限制：{Constants.REMINDERS_MAX}")
+                return f"無法新增提醒：超過訂閱限制：{Constants.REMINDERS_MAX}"
             
             # 處理 recurrence_exceptions 字串轉換為陣列
             recurrence_exceptions_array = None
