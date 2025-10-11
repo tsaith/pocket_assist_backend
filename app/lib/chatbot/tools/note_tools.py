@@ -6,6 +6,10 @@ from app.lib.chatbot.utils import (
     convert_utc_to_taiwan_time,
     convert_taiwan_to_utc_time
 )
+from app.lib.user_subscription_manager import (
+    UserSubscriptionManager,
+    SubscriptionFeature
+)
 
 def create_create_note_tool(user_id: str) -> StructuredTool:
     """創建添加筆記工具"""
@@ -15,6 +19,21 @@ def create_create_note_tool(user_id: str) -> StructuredTool:
 
         print(f"添加筆記：Title {title}, Content {content}")
         try:
+            # 檢查訂閱限制
+            subscription_manager = UserSubscriptionManager(user_id)
+            
+            # 查詢當前用戶的筆記數量
+            notes_response = supabase_admin.from_("notes").select("id", count="exact").eq("user_id", user_id).execute()
+            current_notes_count = notes_response.count if notes_response.count is not None else 0
+            
+            print(f"當前筆記數量：{current_notes_count}")
+            
+            # 檢查是否超過限制
+            if subscription_manager.is_limit_reached(SubscriptionFeature.NOTES, current_notes_count):
+                limit_message = subscription_manager.get_limit_message(SubscriptionFeature.NOTES, current_notes_count)
+                print(f"超過訂閱限制：{limit_message}")
+                return f"無法新增筆記：{limit_message}"
+            
             # 檢查是否已存在相同的 title 組合
             response = supabase_admin.from_("notes").select("*").eq("user_id", user_id).eq("title", title).execute()
             

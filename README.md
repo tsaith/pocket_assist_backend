@@ -1,6 +1,6 @@
-# assistbot_service
+# pocket_assist_backend
 
-Service of Assistbot.
+Backend of PocketAssist
 
 ## Run (development mode)
 $ python main.py

@@ -64,14 +64,16 @@ from app.lib.chatbot.tools import (
     create_delete_reminder_tool
 )
 
+from app.lib.user_time_manager import UserTimeManager
+
 
 class ChatbotBase:
     """
     基礎 Chatbot 類，封裝 langchain 相關邏輯
     """
     
-    def __init__(self, model: str = "gpt-4o-mini"):
-    #def __init__(self, model: str = "gpt-4o"):
+    #def __init__(self, model: str = "gpt-4o-mini"):
+    def __init__(self, model: str = "gpt-4o"):
         """
         初始化 Agent
         
@@ -138,6 +140,7 @@ class ChatbotBase:
         """
 
         self.user_id = user_id
+        self.user_time_manager = UserTimeManager(user_id)
 
         # 創建獲取用戶時區工具
         get_user_timezone_tool = create_get_user_timezone_tool(user_id)
@@ -292,9 +295,18 @@ class ChatbotBase:
             help_tool
         ]
 
+        # Current timezone, date, weekday
+        current_timezone = self.user_time_manager.get_timezone()
+        current_date = self.user_time_manager.get_date()
+        current_weekday = self.user_time_manager.get_weekday()
+
         # 設置提示詞
         self.prompt = f"""
-        你的名字是：{chatbot_name}，
+        你的名字是:{chatbot_name}，
+        目前時區:{current_timezone}，
+        今天日期: {current_date}，
+        今天是: {current_weekday}.
+
         你現在扮演的是一位智能助理，與主人進行對話，並回答主人提出的問題，
         ，給予最精確的回覆。
 
@@ -307,11 +319,11 @@ class ChatbotBase:
         當主人說，某個東西，這代表他要你查詢記憶庫中的那個東西，
         例如，當他說，父親的生日，這代表他要你查詢父親的生日。
 
-        處理時間相關的問題前，必須先查詢目前的時區，然後再查詢現在時間以及今天是禮拜幾。
+        處理時間相關的問題前，必須先查詢現在時間。
 
         請用目前時區的時間回答主人和呼叫工具，絕對不可以使用 UTC 時間。 
 
-        新增/修改/查詢/刪除事件時，都必須先查詢目前的時間和今天是禮拜幾，
+        新增/修改/查詢/刪除事件時，都必須先查詢目前的時間，
         這樣才能判斷主人說的今天或明天所對應的確切日期。
 
         查詢事件時，需要實際查詢資料庫，不可以光靠過去的對話歷史來回答。
@@ -352,10 +364,12 @@ class ChatbotBase:
         當需要對筆記內容做更新時，需要保留原來不相關的部份，只做需要的更正，然後更新筆記內容。 
 
         當新增記帳交易時，需要先查詢目前可用的類別，
-        然後從現有類別中選擇或需要新增類別，自動決定收支type，自動設定交易日期，
-        並且可以設定支付方式，預設是不設定支付方式。
+        然後從現有類別中選擇適合的類別，並自動決定交易日期;
+        倘若沒有適合的類別，那就自動新增類別與收支類型，
+        預設的支付方式是現金。
+
         新增或修改記帳紀錄時，倘若 payment_method 的值是英文，請使用英文小寫去紀錄。
-        查詢記帳紀錄前，必須先查詢目前的時間和今天是禮拜幾，
+        查詢記帳紀錄前，必須先查詢目前的時間，然後再查詢記帳紀錄。
 
         當主人要刪除任何紀錄時，必須要跟主人確認，確認後才可以進行刪除。
 

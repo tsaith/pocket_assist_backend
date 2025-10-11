@@ -16,7 +16,7 @@ app.include_router(api_router)
 
 @app.get("/")
 def index():
-    return {"message": "Welcome to Assistbot Service."}
+    return {"message": "Welcome to PocketAssist backend."}
 
 @app.post("/")
 def post_index():
