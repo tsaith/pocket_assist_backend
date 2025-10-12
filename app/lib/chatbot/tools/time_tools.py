@@ -7,6 +7,7 @@ from app.lib.chatbot.utils import (
 )
 from app.lib.supabase import supabase_admin
 from app.lib.utils import get_user_timezone
+from app.lib.user_time_manager import UserTimeManager
 
 
 def get_weekday(timezone: str = "Asia/Taipei") -> Tuple[str, dict]:
@@ -106,29 +107,22 @@ def get_user_weekday(user_id: str) -> Tuple[str, dict]:
     print(f"獲取 user ID {user_id} 所在時區的今天是禮拜幾")
     
     try:
-        # 先獲取用戶的時區設定
-        timezone_content, timezone_info = get_user_timezone(user_id)
-        
-        # 檢查是否成功獲取時區
-        if "error" in timezone_info:
-            return timezone_content, timezone_info
-        
-        # 獲取用戶的時區
-        user_timezone = timezone_info.get("timezone", "Asia/Taipei")
-        
-        # 獲取該時區的今天是禮拜幾
-        weekday_content, weekday_info = get_weekday(user_timezone)
+        # 使用 UserTimeManager
+        time_manager = UserTimeManager(user_id)
+        timezone = time_manager.get_timezone()
+        weekday = time_manager.get_weekday()
+        date = time_manager.get_date()
         
         # 構建回應
         combined_info = {
             "user_id": user_id,
-            "timezone": user_timezone,
-            "weekday": weekday_info.get("weekday", ""),
-            "date": weekday_info.get("date", ""),
+            "timezone": timezone,
+            "weekday": weekday,
+            "date": date,
             "status": "success"
         }
         
-        content = f"您所在時區 ({user_timezone}) 今天是：{weekday_info.get('weekday', '')}"
+        content = f"您所在時區 ({timezone}) 今天是：{weekday}"
         
         return content, combined_info
         
@@ -143,28 +137,20 @@ def get_user_current_time(user_id: str) -> Tuple[str, dict]:
     print(f"獲取 user ID {user_id} 所在時區的目前時間")
     
     try:
-        # 先獲取用戶的時區設定
-        timezone_content, timezone_info = get_user_timezone(user_id)
-        
-        # 檢查是否成功獲取時區
-        if "error" in timezone_info:
-            return timezone_content, timezone_info
-        
-        # 獲取用戶的時區
-        user_timezone = timezone_info.get("timezone", "Asia/Taipei")
-        
-        # 獲取該時區的當前時間
-        current_time_content, current_time_info = get_current_time_with_timezone(user_timezone)
+        # 使用 UserTimeManager
+        time_manager = UserTimeManager(user_id)
+        timezone = time_manager.get_timezone()
+        current_time = time_manager.get_current_time()
         
         # 構建回應
         combined_info = {
             "user_id": user_id,
-            "timezone": user_timezone,
-            "current_time": current_time_info.get("current_time", ""),
+            "timezone": timezone,
+            "current_time": current_time,
             "status": "success"
         }
         
-        content = f"您目前所在時區 ({user_timezone}) 的時間是：{current_time_info.get('current_time', '')}"
+        content = f"您目前所在時區 ({timezone}) 的時間是：{current_time}"
         
         return content, combined_info
         
@@ -179,15 +165,9 @@ def get_current_timezone(user_id: str) -> Tuple[str, dict]:
     print(f"查詢用戶的時區")
     
     try:
-        # 從 profiles 表取得 timezone
-        profile_response = supabase_admin.from_("profiles").select("timezone").eq("id", user_id).execute()
-        
-        if not profile_response.data:
-            error_msg = f"找不到 user ID {user_id} 的 profile 記錄"
-            print(error_msg)
-            return error_msg, {"error": "Profile not found"}
-        
-        timezone = profile_response.data[0].get("timezone", "Asia/Taipei")
+        # 使用 UserTimeManager
+        time_manager = UserTimeManager(user_id)
+        timezone = time_manager.get_timezone()
         
         timezone_info = {
             "user_id": user_id,
@@ -200,6 +180,87 @@ def get_current_timezone(user_id: str) -> Tuple[str, dict]:
         
     except Exception as e:
         error_msg = f"獲取時區資訊時發生錯誤：{str(e)}"
+        print(error_msg)
+        return error_msg, {"error": str(e)}
+
+
+def get_user_relative_date(user_id: str, days_offset: int) -> Tuple[str, dict]:
+    """獲取指定用戶所在時區的相對日期"""
+    print(f"獲取 user ID {user_id} 所在時區的相對日期：days_offset={days_offset}")
+    
+    try:
+        # 使用 UserTimeManager
+        time_manager = UserTimeManager(user_id)
+        timezone = time_manager.get_timezone()
+        target_date = time_manager.get_relative_date(days_offset)
+        
+        # 日期描述
+        days_description = {
+            -3: "大前天", -2: "前天", -1: "昨天", 0: "今天",
+            1: "明天", 2: "後天", 3: "大後天"
+        }
+        days_desc = days_description.get(days_offset, f"{days_offset}天後" if days_offset > 0 else f"{abs(days_offset)}天前")
+        
+        # 構建回應
+        date_info = {
+            "user_id": user_id,
+            "timezone": timezone,
+            "date": target_date,
+            "days_offset": days_offset,
+            "description": days_desc,
+            "status": "success"
+        }
+        
+        content = f"{days_desc}的日期是：{target_date}"
+        
+        return content, date_info
+        
+    except Exception as e:
+        error_msg = f"獲取相對日期時發生錯誤：{str(e)}"
+        print(error_msg)
+        return error_msg, {"error": str(e)}
+
+
+def get_user_relative_weekday_date(user_id: str, weekday: int, weeks_offset: int) -> Tuple[str, dict]:
+    """獲取指定用戶所在時區的相對星期幾日期"""
+    print(f"獲取 user ID {user_id} 所在時區的相對星期幾日期：weekday={weekday}, weeks_offset={weeks_offset}")
+    
+    try:
+        # 使用 UserTimeManager
+        time_manager = UserTimeManager(user_id)
+        timezone = time_manager.get_timezone()
+        target_date = time_manager.get_weekday_date(weekday, weeks_offset)
+        
+        # 星期名稱對照
+        weekday_names = {
+            1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday",
+            5: "Friday", 6: "Saturday", 7: "Sunday"
+        }
+        weekday_name = weekday_names.get(weekday, str(weekday))
+        
+        # 週數描述
+        weeks_description = {
+            -2: "上上週", -1: "上週", 0: "本週", 1: "下週", 2: "下下週"
+        }
+        weeks_desc = weeks_description.get(weeks_offset, f"{weeks_offset}週")
+        
+        # 構建回應
+        date_info = {
+            "user_id": user_id,
+            "timezone": timezone,
+            "date": target_date,
+            "weekday": weekday_name,
+            "weeks_offset": weeks_offset,
+            "description": f"{weeks_desc}{weekday_name}",
+            "status": "success"
+        }
+        
+        content = f"{weeks_desc}{weekday_name}的日期是：{target_date}"
+        
+        return content, date_info
+        
+    except Exception as e:
+        error_msg = f"獲取相對星期幾日期時發生錯誤：{str(e)}"
         print(error_msg)
         return error_msg, {"error": str(e)}
 
@@ -299,3 +360,73 @@ def create_get_current_timezone_tool(user_id: str) -> StructuredTool:
     )
     
     return get_current_timezone_tool
+
+
+def create_get_relative_date_tool(user_id: str) -> StructuredTool:
+    """創建獲取相對日期工具"""
+    
+    def get_relative_date_wrapper(days_offset: int) -> Tuple[str, dict]:
+        """
+        獲取相對日期的包裝函數
+        
+        Args:
+            days_offset: 天數偏移 (-3=大前天, -2=前天, -1=昨天, 0=今天, 1=明天, 2=後天, 3=大後天)
+        """
+        return get_user_relative_date(user_id, days_offset)
+    
+    get_relative_date_tool = StructuredTool.from_function(
+        func=get_relative_date_wrapper,
+        name="get_relative_date",
+        description="""
+            獲取相對日期。需要提供一個參數：
+            - days_offset: 天數偏移
+              -3 = 大前天
+              -2 = 前天
+              -1 = 昨天
+              0 = 今天
+              1 = 明天
+              2 = 後天
+              3 = 大後天
+            
+            也可以使用其他數字，例如 7 表示 7 天後，-7 表示 7 天前。
+            
+            此工具會自動使用用戶所在時區計算指定的日期（YYYY-MM-DD格式）。
+        """,
+        return_direct=False
+    )
+    
+    return get_relative_date_tool
+
+
+def create_get_relative_weekday_date_tool(user_id: str) -> StructuredTool:
+    """創建獲取相對星期幾日期工具"""
+    
+    def get_relative_weekday_date_wrapper(weekday: int, weeks_offset: int = 0) -> Tuple[str, dict]:
+        """
+        獲取相對星期幾日期的包裝函數
+        
+        Args:
+            weekday: 星期幾 (1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday)
+            weeks_offset: 周數偏移 (-2=上上週, -1=上週, 0=本週, 1=下週, 2=下下週)
+        """
+        return get_user_relative_weekday_date(user_id, weekday, weeks_offset)
+    
+    get_relative_weekday_date_tool = StructuredTool.from_function(
+        func=get_relative_weekday_date_wrapper,
+        name="get_relative_weekday_date",
+        description="""
+            獲取相對星期幾的日期。需要提供兩個參數：
+            - weekday: 星期幾，1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
+            - weeks_offset: 周數偏移，-2=上上週, -1=上週, 0=本週, 1=下週, 2=下下週
+            
+            例如：
+            - 下週三：weekday=3, weeks_offset=1
+            - 上週五：weekday=5, weeks_offset=-1
+            - 下下週一：weekday=1, weeks_offset=2
+            
+            此工具會自動使用用戶所在時區計算指定的日期（YYYY-MM-DD格式）。
+        """,
+        return_direct=False
+    )
+    
+    return get_relative_weekday_date_tool

@@ -19,56 +19,38 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
         description: str,
         is_recurring: bool = False,
         recurrence_rule: str = None,
-        recurrence_exceptions: str = None,
-        status: str = 'active'
+        recurrence_exceptions: str = None
     ) -> str:
         """添加新的提醒"""
 
         method = method.lower()
         print(f"添加提醒： Remind At {remind_at}, Method {method}, Description {description}")
         try:
-            # 改進的時間比較邏輯，支援時區資訊
-            print(f"提醒時間：{remind_at}")
             
-            # 解析 remind_at 時間
+            # 解析並轉換 remind_at 時間為 UTC
             try:
-                if '+' in remind_at or 'Z' in remind_at or remind_at.endswith('Z'):
+                if '+' in remind_at or 'Z' in remind_at:
                     # 包含時區資訊的時間，直接解析
                     if remind_at.endswith('Z'):
                         remind_at = remind_at.replace('Z', '+00:00')
                     remind_dt = datetime.fromisoformat(remind_at)
+                    
+                    # 轉換為 UTC
+                    if remind_dt.tzinfo is None:
+                        remind_dt = remind_dt.replace(tzinfo=timezone.utc)
+                    else:
+                        remind_dt = remind_dt.astimezone(timezone.utc)
+                    
+                    # 格式化為 UTC 時間字串
+                    remind_at_utc = remind_dt.strftime('%Y-%m-%d %H:%M:%S')
                 else:
-                    # 假設為用戶本地時間，需要轉換為 UTC 進行比較
+                    # 假設為用戶本地時間，轉換為 UTC
                     remind_at_utc, convert_info = convert_user_local_to_utc_time(user_id, remind_at)
                     if "error" in convert_info:
                         return f"錯誤：時間格式不正確，請使用本地時間格式 YYYY-MM-DD HH:MM:SS 或包含時區的格式 YYYY-MM-DDTHH:MM:SS+HH:MM"
-                    
-                    # 將轉換後的 UTC 時間解析為 datetime 物件
-                    remind_dt = datetime.fromisoformat(remind_at_utc)
-                    if remind_dt.tzinfo is None:
-                        remind_dt = remind_dt.replace(tzinfo=timezone.utc)
                 
-                # 獲取當前 UTC 時間
-                current_utc = datetime.now(timezone.utc)
-                
-                # 確保 remind_dt 有時區資訊
-                if remind_dt.tzinfo is None:
-                    remind_dt = remind_dt.replace(tzinfo=timezone.utc)
-                
-                # 將 remind_dt 轉換為 UTC 進行比較
-                if remind_dt.tzinfo != timezone.utc:
-                    remind_dt = remind_dt.astimezone(timezone.utc)
-                
-                # 比較時間，要求提醒時間比目前時間至少晚 50 秒（約 1 分鐘）
-                minimum_delay = timedelta(seconds=50)
-                required_time = current_utc + minimum_delay
-                
-                if remind_dt < required_time:
-                    print(f"錯誤：提醒時間必須比目前時間至少晚 1 分鐘）")
-                    return f"錯誤：提醒時間必須比目前時間至少晚 1 分鐘。當前時間：{current_utc.strftime('%Y-%m-%d %H:%M:%S')} UTC，最早可設定時間：{required_time.strftime('%Y-%m-%d %H:%M:%S')} UTC"
-                    
             except ValueError as e:
-                return f"錯誤：時間格式不正確，請使用格式 YYYY-MM-DDTHH:MM:SS+HH:MM，錯誤詳情：{str(e)}"
+                return f"錯誤：時間格式不正確，請使用格式 YYYY-MM-DD HH:MM:SS 或 YYYY-MM-DDTHH:MM:SS+HH:MM，錯誤詳情：{str(e)}"
             
             # 驗證 method 是否在允許的值中
             valid_methods = ['notification', 'notification-long']
@@ -83,12 +65,10 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
             reminders_response = supabase_admin.from_("reminders").select("id", count="exact").eq("user_id", user_id).eq("status", "active").execute()
             current_reminders_count = reminders_response.count if reminders_response.count is not None else 0
             
-            print(f"當前提醒數量：{current_reminders_count}")
-            
             # 檢查是否超過限制
             if current_reminders_count >= Constants.REMINDERS_MAX:
-                print(f"無法新增提醒：超過訂閱限制：{Constants.REMINDERS_MAX}")
-                return f"無法新增提醒：超過訂閱限制：{Constants.REMINDERS_MAX}"
+                print(f"無法新增提醒：超過最大限制：{Constants.REMINDERS_MAX}")
+                return f"無法新增提醒：超過最大限制：{Constants.REMINDERS_MAX}"
             
             # 處理 recurrence_exceptions 字串轉換為陣列
             recurrence_exceptions_array = None
@@ -103,19 +83,18 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
             
             # 檢查是否已存在相同的 user_id、 remind_at、 method 組合（僅對非重複提醒）
             if not is_recurring:
-                response = supabase_admin.from_("reminders").select("*").eq("user_id", user_id).eq("remind_at", remind_at).eq("method", method).execute()
+                response = supabase_admin.from_("reminders").select("*").eq("user_id", user_id).eq("remind_at", remind_at_utc).eq("method", method).execute()
                 
                 if response.data:
                     return f"已存在相同的提醒記錄"
             
-            # 準備插入資料
+            # 準備插入資料（使用 UTC 時間）
             insert_data = {
                 "user_id": user_id,
                 "description": description,
-                "remind_at": remind_at,
+                "remind_at": remind_at_utc,  # 使用 UTC 時間
                 "method": method,
-                "is_recurring": is_recurring,
-                "status": status
+                "is_recurring": is_recurring
             }
 
             # 添加可選欄位
@@ -130,7 +109,7 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
             if result.data:
                 new_record = result.data[0]
                 recurring_info = f", 重複提醒: {'是' if is_recurring else '否'}"
-                return f"成功添加提醒，ID: {new_record.get('id', '')}, Remind At: {remind_at}{recurring_info}"
+                return f"成功添加提醒，ID: {new_record.get('id', '')}, Remind At (UTC): {remind_at_utc}{recurring_info}"
             else:
                 return "添加提醒失敗"
                 
@@ -143,18 +122,17 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
         func=create_reminder,
         name="create_reminder",
         description="""
-            添加新的提醒，需要提供 remind_at、method、description 等參數，
-            時間參數時請用本地時間設定 remind_at;
-            method 支援 notification、notification-long;
-            is_recurring 設定是否為重複提醒（預設 false）;
+            添加新的提醒，需要提供 remind_at、method、description 等參數。
+            remind_at 請使用用戶本地時間（格式：YYYY-MM-DD HH:MM:SS），系統會自動轉換為 UTC 時間儲存。
+            method 支援 notification、notification-long。
+            is_recurring 設定是否為重複提醒（預設 false）。
             recurrence_rule 使用 iCalendar RRULE 格式設定重複規則，例如：
-            - 每週一到週五：FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;
             - 每日：FREQ=DAILY
             - 每週：FREQ=WEEKLY
             - 每月：FREQ=MONTHLY
             - 每年：FREQ=YEARLY
-            recurrence_exceptions 設定排除的例外日期，格式為逗號分隔的時間字串;
-            status 設定提醒狀態，預設為 active。
+            - 每週一到週五：FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+            recurrence_exceptions 設定排除的例外日期，格式為逗號分隔的時間字串。
             """
     )
 

@@ -62,7 +62,9 @@ from app.lib.chatbot.tools import (
     create_search_reminder_by_time_tool,
     create_update_reminder_tool,
     create_delete_reminder_tool,
-    create_get_user_tier_tool
+    create_get_user_tier_tool,
+    create_get_relative_date_tool,
+    create_get_relative_weekday_date_tool
 )
 
 from app.lib.user_time_manager import UserTimeManager
@@ -257,6 +259,12 @@ class ChatbotBase:
         # 創建獲取用戶訂閱層級工具
         get_user_tier_tool = create_get_user_tier_tool(user_id)
 
+        # 創建獲取相對日期工具
+        get_relative_date_tool = create_get_relative_date_tool(user_id)
+
+        # 創建獲取相對星期幾日期工具
+        get_relative_weekday_date_tool = create_get_relative_weekday_date_tool(user_id)
+
         # 設置工具列表
         self.tools = [
             get_user_language_tool,
@@ -268,6 +276,8 @@ class ChatbotBase:
             get_user_current_time_tool,
             get_user_weekday_tool,
             get_user_tier_tool,
+            get_relative_date_tool,
+            get_relative_weekday_date_tool,
             read_reminder_tool,
             read_reminders_tool,
             search_reminders_by_keyword_tool,
@@ -381,6 +391,10 @@ class ChatbotBase:
         絕對不要使用 ** 的符號來表示標題或重點。
 
         當呼叫時間相關工具時，使用的參數必須是英文或數字，不要使用中文。
+
+        查詢相對日期時：
+        - 使用 get_relative_date 工具查詢明天、後天、昨天等日期（參數為天數偏移：1=明天, 2=後天, -1=昨天）
+        - 使用 get_relative_weekday_date 工具查詢下週三、上週五等日期（weekday: 1-7表示週一到週日, weeks_offset: 1=下週, -1=上週）
 
         """
 
