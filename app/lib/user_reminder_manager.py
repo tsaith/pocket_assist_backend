@@ -3,11 +3,8 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 
 from app.lib.supabase import supabase_admin
-from app.lib.user_subscription_manager import UserSubscriptionManager, SubscriptionFeature
-from app.lib.utils.time_utils import (
-    convert_user_local_to_utc_time,
-    convert_utc_to_user_local_time
-)
+from app.lib.user_time_manager import UserTimeManager
+from app.core.constants import Constants
 
 
 class UserReminderManager:
@@ -21,6 +18,7 @@ class UserReminderManager:
             user_id: The user's ID
         """
         self.user_id = user_id
+        self.time_manager = UserTimeManager(user_id)
     
     def create_reminder(self, remind_at: str, method: str, description: str,
                        is_recurring: bool = False, recurrence_rule: Optional[str] = None,
@@ -56,16 +54,15 @@ class UserReminderManager:
                     else:
                         remind_dt = remind_dt.astimezone(timezone.utc)
                     
-                    # Format as UTC time string
-                    remind_at_utc = remind_dt.strftime('%Y-%m-%d %H:%M:%S')
+                    # Format as UTC time string (ISO 8601 format with Z suffix)
+                    remind_at_utc = remind_dt.isoformat().replace('+00:00', 'Z')
                 else:
-                    # Assume user local time, convert to UTC
-                    remind_at_utc, convert_info = convert_user_local_to_utc_time(self.user_id, remind_at)
-                    if "error" in convert_info:
+                    # Assume user local time, convert to UTC using UserTimeManager
+                    try:
+                        remind_at_utc = self.time_manager.convert_local_to_utc_time(remind_at)
+                    except Exception as convert_error:
                         return f"錯誤：時間格式不正確，請使用本地時間格式 YYYY-MM-DD HH:MM:SS 或包含時區的格式 YYYY-MM-DDTHH:MM:SS+HH:MM"
                 
-                print(f"提醒時間（UTC）：{remind_at_utc}")
-                    
             except ValueError as e:
                 return f"錯誤：時間格式不正確，請使用格式 YYYY-MM-DD HH:MM:SS 或 YYYY-MM-DDTHH:MM:SS+HH:MM，錯誤詳情：{str(e)}"
             
@@ -78,20 +75,14 @@ class UserReminderManager:
             if is_recurring and not recurrence_rule:
                 return f"錯誤：設定為重複提醒時必須提供 recurrence_rule"
             
-            # Check subscription limits
-            subscription_manager = UserSubscriptionManager(self.user_id)
-            
             # Get current active reminders count
             reminders_response = supabase_admin.from_("reminders").select("id", count="exact").eq("user_id", self.user_id).eq("status", "active").execute()
             current_reminders_count = reminders_response.count if reminders_response.count is not None else 0
             
-            print(f"當前提醒數量：{current_reminders_count}")
+            if current_reminders_count >= Constants.REMINDERS_MAX:
+                print(f"超過最大提醒上限：{Constants.REMINDERS_MAX}")
+                return f"無法新增提醒：達到最大提醒上限，最多只能新增 {Constants.REMINDERS_MAX} 個提醒"
             
-            # Check if limit is reached
-            if subscription_manager.is_limit_reached(SubscriptionFeature.REMINDERS, current_reminders_count):
-                limit_message = subscription_manager.get_limit_message(SubscriptionFeature.REMINDERS, current_reminders_count)
-                print(f"超過訂閱限制：{limit_message}")
-                return f"無法新增提醒：{limit_message}"
             
             # Process recurrence_exceptions string to array
             recurrence_exceptions_array = None
@@ -299,15 +290,13 @@ class UserReminderManager:
         """
         print(f"根據時間範圍搜尋提醒 from user_id：{self.user_id}, start_at：{start_at}, end_at：{end_at}")
         try:
-            # Convert user local time to UTC
-            start_at_utc, start_info = convert_user_local_to_utc_time(self.user_id, start_at)
-            end_at_utc, end_info = convert_user_local_to_utc_time(self.user_id, end_at)
-            
-            # Check if conversion was successful
-            if "error" in start_info or "error" in end_info:
-                return f"時間轉換失敗，請確認時間格式是否正確"
-            
-            print(f"start_at_utc：{start_at_utc}, end_at_utc：{end_at_utc}")
+            # Convert user local time to UTC using UserTimeManager
+            try:
+                start_at_utc = self.time_manager.convert_local_to_utc_time(start_at)
+                end_at_utc = self.time_manager.convert_local_to_utc_time(end_at)
+                print(f"start_at_utc：{start_at_utc}, end_at_utc：{end_at_utc}")
+            except Exception as e:
+                return f"時間轉換失敗，請確認時間格式是否正確：{str(e)}"
             
             # Import ReminderManager for recurring reminder logic (lazy import to avoid circular import)
             from app.lib.reminder_manager import ReminderManager
@@ -322,7 +311,7 @@ class UserReminderManager:
             if one_time_response.data:
                 for reminder_data in one_time_response.data:
                     remind_at = reminder_data.get('remind_at', '')
-                    remind_at_local, local_info = convert_utc_to_user_local_time(self.user_id, remind_at)
+                    remind_at_local = self.time_manager.convert_utc_to_local_time(remind_at)
                     
                     reminder_info = f"ID: {reminder_data.get('id', '')}, Description: {reminder_data.get('description', '')}, Remind At: {remind_at_local}, Method: {reminder_data.get('method', '')}, Is Sent: {reminder_data.get('is_sent', '')}, Sent At: {reminder_data.get('sent_at', '')}, Created: {reminder_data.get('created_at', '')}, Type: 一次性提醒"
                     one_time_reminders.append(reminder_info)
@@ -350,7 +339,7 @@ class UserReminderManager:
                             instance = reminder_manager.get_recurring_reminder_instance(reminder_data, current_datetime)
                             if instance:
                                 remind_at = instance.get('remind_at', '')
-                                remind_at_local, local_info = convert_utc_to_user_local_time(self.user_id, remind_at)
+                                remind_at_local = self.time_manager.convert_utc_to_local_time(remind_at)
                                 
                                 # Parse recurrence rule for display
                                 recurrence_rule = reminder_data.get('recurrence_rule', '')

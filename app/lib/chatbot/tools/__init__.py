@@ -8,4 +8,4 @@ from .bookkeeping_tools import *
 from .other_tools import *
 from .help_tools import *
 from .location_tools import *
-from .user_subscription_tools import *
+from .subscription_tools import *

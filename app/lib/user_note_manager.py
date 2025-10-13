@@ -2,12 +2,12 @@
 from typing import Optional, List, Dict, Any
 
 from app.lib.supabase import supabase_admin
-from app.lib.user_subscription_manager import UserSubscriptionManager, SubscriptionFeature
 from app.lib.utils.time_utils import (
     convert_user_local_to_utc_time,
     convert_utc_to_user_local_time
 )
 
+from app.core.constants import Constants
 
 class UserNoteManager:
     """Manager class for user note operations"""
@@ -34,21 +34,17 @@ class UserNoteManager:
         """
         print(f"添加筆記：Title {title}, Content {content}")
         try:
-            # Check subscription limits
-            subscription_manager = UserSubscriptionManager(self.user_id)
-            
+
             # Get current notes count
             notes_response = supabase_admin.from_("notes").select("id", count="exact").eq("user_id", self.user_id).execute()
             current_notes_count = notes_response.count if notes_response.count is not None else 0
             
             print(f"當前筆記數量：{current_notes_count}")
             
-            # Check if limit is reached
-            if subscription_manager.is_limit_reached(SubscriptionFeature.NOTES, current_notes_count):
-                limit_message = subscription_manager.get_limit_message(SubscriptionFeature.NOTES, current_notes_count)
-                print(f"超過訂閱限制：{limit_message}")
-                return f"無法新增筆記：{limit_message}"
-            
+            if current_notes_count >= Constants.NOTES_MAX:
+                print(f"超過最大筆記上限：{Constants.NOTES_MAX}")
+                return f"無法新增筆記：達到最大筆記上限，最多只能新增 {Constants.NOTES_MAX} 個筆記"
+                
             # Check if note with same title already exists
             response = supabase_admin.from_("notes").select("*").eq("user_id", self.user_id).eq("title", title).execute()
             

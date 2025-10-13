@@ -255,7 +255,7 @@ def get_user_weekday_date(user_id: str, weekday: int, weeks_offset: int = 0) -> 
 
 
 def convert_utc_to_local_time(time_utc: str, timezone: str) -> str:
-    """將 UTC 時間轉換為指定時區的本地時間"""
+    """將 UTC 時間轉換為指定時區的本地時間（ISO 8601/RFC 3339 格式）"""
     try:
         # 解析 UTC 時間
         utc_dt = datetime.fromisoformat(time_utc.replace('Z', '+00:00'))
@@ -268,8 +268,8 @@ def convert_utc_to_local_time(time_utc: str, timezone: str) -> str:
         local_tz = ZoneInfo(timezone)
         local_dt = utc_dt.astimezone(local_tz)
         
-        # 返回本地時間字符串（不包含時區信息）
-        return local_dt.strftime('%Y-%m-%d %H:%M:%S')
+        # 返回本地時間字符串（ISO 8601/RFC 3339 格式，包含時區信息）
+        return local_dt.isoformat()
         
     except Exception as e:
         print(f"轉換 UTC 時間到本地時間時發生錯誤：{str(e)}")
@@ -277,7 +277,7 @@ def convert_utc_to_local_time(time_utc: str, timezone: str) -> str:
 
 
 def convert_local_to_utc_time(time_local: str, timezone: str) -> str:
-    """將本地時區時間轉換為 UTC 時間"""
+    """將本地時區時間轉換為 UTC 時間（ISO 8601/RFC 3339 格式）"""
     try:
         # 解析本地時間
         local_dt = datetime.fromisoformat(time_local)
@@ -289,8 +289,8 @@ def convert_local_to_utc_time(time_local: str, timezone: str) -> str:
         # 轉換到 UTC
         utc_dt = local_dt.astimezone(ZoneInfo('UTC'))
         
-        # 返回 UTC 時間字符串
-        return utc_dt.strftime('%Y-%m-%d %H:%M:%S')
+        # 返回 UTC 時間字符串（ISO 8601/RFC 3339 格式，以 Z 結尾表示 UTC）
+        return utc_dt.isoformat().replace('+00:00', 'Z')
         
     except Exception as e:
         print(f"轉換本地時間到 UTC 時間時發生錯誤：{str(e)}")

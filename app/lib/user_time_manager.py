@@ -5,7 +5,9 @@ from app.lib.utils.time_utils import (
     get_current_time,
     get_user_timezone,
     get_weekday_date,
-    get_relative_date
+    get_relative_date,
+    convert_user_local_to_utc_time,
+    convert_utc_to_user_local_time
 )
 
 
@@ -69,3 +71,37 @@ class UserTimeManager:
             manager.get_weekday_date(1, 2)   # 下下週一
         """
         return get_weekday_date(self.timezone, weekday, weeks_offset)
+
+    def convert_local_to_utc_time(self, time_local: str) -> str:
+        """
+        將本地時間轉換為 UTC 時間（ISO 8601/RFC 3339 格式）
+        
+        Args:
+            time_local: 本地時間字符串（格式：YYYY-MM-DD HH:MM:SS 或 ISO 8601 格式）
+        
+        Returns:
+            str: UTC 時間字符串（ISO 8601/RFC 3339 格式，以 Z 結尾）
+        
+        Examples:
+            manager.convert_local_to_utc_time("2025-10-13 15:30:00")
+            # 返回: "2025-10-13T07:30:00Z" (假設時區為 Asia/Taipei, UTC+8)
+        """
+        utc_time, time_info = convert_user_local_to_utc_time(self.user_id, time_local)
+        return utc_time
+
+    def convert_utc_to_local_time(self, time_utc: str) -> str:
+        """
+        將 UTC 時間轉換為本地時間（ISO 8601/RFC 3339 格式）
+        
+        Args:
+            time_utc: UTC 時間字符串（格式：YYYY-MM-DD HH:MM:SS 或 ISO 8601 格式）
+        
+        Returns:
+            str: 本地時間字符串（ISO 8601/RFC 3339 格式，包含時區偏移）
+        
+        Examples:
+            manager.convert_utc_to_local_time("2025-10-13 07:30:00")
+            # 返回: "2025-10-13T15:30:00+08:00" (假設時區為 Asia/Taipei, UTC+8)
+        """
+        local_time, time_info = convert_utc_to_user_local_time(self.user_id, time_utc)
+        return local_time
