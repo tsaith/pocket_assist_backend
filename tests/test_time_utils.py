@@ -101,22 +101,28 @@ def test_get_user_weekday_date(monkeypatch, fixed_datetime):
 
 def test_convert_utc_to_local_time():
     result = time_utils.convert_utc_to_local_time("2024-01-15T02:30:00Z", "Asia/Taipei")
-    assert result == "2024-01-15 10:30:00"
+    result_dt = real_datetime.fromisoformat(result)
+    expected_dt = real_datetime(2024, 1, 15, 10, 30, tzinfo=ZoneInfo("Asia/Taipei"))
+    assert result_dt == expected_dt
 
 
 def test_convert_local_to_utc_time():
     result = time_utils.convert_local_to_utc_time("2024-01-15 10:30:00", "Asia/Taipei")
-    assert result == "2024-01-15 02:30:00"
+    result_dt = real_datetime.fromisoformat(result.replace("Z", "+00:00"))
+    expected_dt = real_datetime(2024, 1, 15, 2, 30, tzinfo=ZoneInfo("UTC"))
+    assert result_dt == expected_dt
 
 
 def test_convert_user_local_to_utc_time(monkeypatch):
     monkeypatch.setattr(
         time_utils,
-        "get_user_timezone_with_info",
-        lambda _user_id: ("內容", {"timezone": "Asia/Taipei"}),
+        "get_user_timezone",
+        lambda _user_id: "Asia/Taipei",
     )
     utc_time, info = time_utils.convert_user_local_to_utc_time("user-123", "2024-01-15 10:30:00")
-    assert utc_time == "2024-01-15 02:30:00"
+    result_dt = real_datetime.fromisoformat(utc_time.replace("Z", "+00:00"))
+    expected_dt = real_datetime(2024, 1, 15, 2, 30, tzinfo=ZoneInfo("UTC"))
+    assert result_dt == expected_dt
     assert info["status"] == "success"
     assert info["timezone"] == "Asia/Taipei"
 
@@ -124,22 +130,24 @@ def test_convert_user_local_to_utc_time(monkeypatch):
 def test_convert_user_local_to_utc_time_error(monkeypatch):
     monkeypatch.setattr(
         time_utils,
-        "get_user_timezone_with_info",
-        lambda _user_id: ("錯誤", {"error": "Profile not found"}),
+        "get_user_timezone",
+        lambda _user_id: "找不到 user profile",
     )
     utc_time, info = time_utils.convert_user_local_to_utc_time("user-123", "2024-01-15 10:30:00")
     assert utc_time == "2024-01-15 10:30:00"
-    assert info["error"] == "Profile not found"
+    assert info["error"] == "找不到 user profile"
 
 
 def test_convert_utc_to_user_local_time(monkeypatch):
     monkeypatch.setattr(
         time_utils,
-        "get_user_timezone_with_info",
-        lambda _user_id: ("內容", {"timezone": "Asia/Taipei"}),
+        "get_user_timezone",
+        lambda _user_id: "Asia/Taipei",
     )
     local_time, info = time_utils.convert_utc_to_user_local_time("user-123", "2024-01-15T02:30:00Z")
-    assert local_time == "2024-01-15 10:30:00"
+    result_dt = real_datetime.fromisoformat(local_time)
+    expected_dt = real_datetime(2024, 1, 15, 10, 30, tzinfo=ZoneInfo("Asia/Taipei"))
+    assert result_dt == expected_dt
     assert info["status"] == "success"
     assert info["timezone"] == "Asia/Taipei"
 
@@ -147,12 +155,12 @@ def test_convert_utc_to_user_local_time(monkeypatch):
 def test_convert_utc_to_user_local_time_error(monkeypatch):
     monkeypatch.setattr(
         time_utils,
-        "get_user_timezone_with_info",
-        lambda _user_id: ("錯誤", {"error": "Profile not found"}),
+        "get_user_timezone",
+        lambda _user_id: "找不到 user profile",
     )
     local_time, info = time_utils.convert_utc_to_user_local_time("user-123", "2024-01-15T02:30:00Z")
     assert local_time == "2024-01-15T02:30:00Z"
-    assert info["error"] == "Profile not found"
+    assert info["error"] == "找不到 user profile"
 
 
 def test_convert_local_to_utc_date():
@@ -168,8 +176,8 @@ def test_convert_utc_to_local_date():
 def test_convert_user_local_to_utc_date(monkeypatch):
     monkeypatch.setattr(
         time_utils,
-        "get_user_timezone_with_info",
-        lambda _user_id: ("內容", {"timezone": "Asia/Tokyo"}),
+        "get_user_timezone",
+        lambda _user_id: "Asia/Tokyo",
     )
     utc_date, info = time_utils.convert_user_local_to_utc_date("user-123", "2024-01-15")
     assert utc_date == "2024-01-14"
@@ -180,8 +188,8 @@ def test_convert_user_local_to_utc_date(monkeypatch):
 def test_convert_utc_to_user_local_date(monkeypatch):
     monkeypatch.setattr(
         time_utils,
-        "get_user_timezone_with_info",
-        lambda _user_id: ("內容", {"timezone": "Asia/Tokyo"}),
+        "get_user_timezone",
+        lambda _user_id: "Asia/Tokyo",
     )
     local_date, info = time_utils.convert_utc_to_user_local_date("user-123", "2024-01-14")
     assert local_date == "2024-01-14"

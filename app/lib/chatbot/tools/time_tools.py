@@ -6,8 +6,8 @@ from app.lib.chatbot.utils import (
     get_city_local_time
 )
 from app.lib.supabase import supabase_admin
-from app.lib.utils import get_user_timezone
 from app.lib.user_time_manager import UserTimeManager
+from app.lib.utils.time_utils import get_user_timezone
 
 
 def get_weekday(timezone: str = "Asia/Taipei") -> Tuple[str, dict]:

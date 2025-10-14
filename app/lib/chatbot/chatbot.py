@@ -101,44 +101,11 @@ class Chatbot(ChatbotBase):
                 error_message = '抱歉，由於 Credits 不足，無法繼續提供對話服務。'
                 user_message = f'請回復 {error_message}'
 
-            '''
-            else:
-                # 儲存使用者訊息到聊天歷史
-                user_message_meta_data = {}
-                try:
-                    await save_chat_message(
-                        self.chatbot_id,
-                        user_id,
-                        platform,
-                        'human',
-                        user_message,
-                        user_message_meta_data
-                    )
-                except Exception as error:
-                    print(f'Failed to save user message: {error}')
-                '''
-
             # 呼叫父類 Agent 的 invoke 方法
             response = super().invoke(user_message, thread_id)
 
             # 如果回應成功，儲存機器人回應並消耗 credits
             if 'result' in response:
-
-
-                '''
-                bot_message_meta_data = {}
-                try:
-                    await save_chat_message(
-                        self.chatbot_id,
-                        user_id,
-                        platform,
-                        'bot',
-                        response['result'],
-                        bot_message_meta_data
-                    )
-                except Exception as error:
-                    print(f'Failed to save bot response: {error}')
-                '''    
 
                 # Consume credits from tokens
                 token_usage = response['token_usage']

@@ -2,7 +2,6 @@ from typing import Tuple
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from app.lib.supabase import supabase_admin
-from .user_utils import get_user_timezone as get_user_timezone_with_info
 
 
 def get_weekday(timezone: str) -> str:
@@ -298,17 +297,14 @@ def convert_local_to_utc_time(time_local: str, timezone: str) -> str:
 
 
 def convert_user_local_to_utc_time(user_id: str, time_local: str) -> Tuple[str, dict]:
-    """將用戶本地時間轉換為 UTC 時間"""
+    """將用戶本地時間轉換為 UTC 時間（ISO 8601/RFC 3339 格式）"""
     try:
         # 獲取用戶時區
-        timezone_content, timezone_info = get_user_timezone_with_info(user_id)
+        user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否成功獲取時區
-        if "error" in timezone_info:
-            return time_local, timezone_info
-        
-        # 獲取用戶的時區
-        user_timezone = timezone_info.get("timezone", "Asia/Taipei")
+        # 檢查是否有錯誤
+        if "錯誤" in user_timezone or "找不到" in user_timezone:
+            return time_local, {"error": user_timezone}
         
         # 轉換時間
         utc_time = convert_local_to_utc_time(time_local, user_timezone)
@@ -330,17 +326,14 @@ def convert_user_local_to_utc_time(user_id: str, time_local: str) -> Tuple[str, 
 
 
 def convert_utc_to_user_local_time(user_id: str, time_utc: str) -> Tuple[str, dict]:
-    """將 UTC 時間轉換為用戶所在時區的本地時間"""
+    """將 UTC 時間轉換為用戶所在時區的本地時間（ISO 8601/RFC 3339 格式）"""
     try:
         # 獲取用戶時區
-        timezone_content, timezone_info = get_user_timezone_with_info(user_id)
+        user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否成功獲取時區
-        if "error" in timezone_info:
-            return time_utc, timezone_info
-        
-        # 獲取用戶的時區
-        user_timezone = timezone_info.get("timezone", "Asia/Taipei")
+        # 檢查是否有錯誤
+        if "錯誤" in user_timezone or "找不到" in user_timezone:
+            return time_utc, {"error": user_timezone}
         
         # 轉換時間
         local_time = convert_utc_to_local_time(time_utc, user_timezone)
@@ -407,14 +400,11 @@ def convert_user_local_to_utc_date(user_id: str, date_local: str) -> Tuple[str, 
     """將用戶本地日期轉換為 UTC 日期"""
     try:
         # 獲取用戶時區
-        timezone_content, timezone_info = get_user_timezone_with_info(user_id)
+        user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否成功獲取時區
-        if "error" in timezone_info:
-            return date_local, timezone_info
-        
-        # 獲取用戶的時區
-        user_timezone = timezone_info.get("timezone", "Asia/Taipei")
+        # 檢查是否有錯誤
+        if "錯誤" in user_timezone or "找不到" in user_timezone:
+            return date_local, {"error": user_timezone}
         
         # 轉換日期
         utc_date = convert_local_to_utc_date(date_local, user_timezone)
@@ -439,14 +429,11 @@ def convert_utc_to_user_local_date(user_id: str, date_utc: str) -> Tuple[str, di
     """將 UTC 日期轉換為用戶所在時區的本地日期"""
     try:
         # 獲取用戶時區
-        timezone_content, timezone_info = get_user_timezone_with_info(user_id)
+        user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否成功獲取時區
-        if "error" in timezone_info:
-            return date_utc, timezone_info
-        
-        # 獲取用戶的時區
-        user_timezone = timezone_info.get("timezone", "Asia/Taipei")
+        # 檢查是否有錯誤
+        if "錯誤" in user_timezone or "找不到" in user_timezone:
+            return date_utc, {"error": user_timezone}
         
         # 轉換日期
         local_date = convert_utc_to_local_date(date_utc, user_timezone)

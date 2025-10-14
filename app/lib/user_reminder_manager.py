@@ -1,4 +1,3 @@
-
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 
@@ -20,11 +19,69 @@ class UserReminderManager:
         self.user_id = user_id
         self.time_manager = UserTimeManager(user_id)
     
+    def get_reminder_method(self) -> str:
+        """
+        Retrieve reminder delivery method for the user from Supabase
+        
+        Returns:
+            str: Reminder method or error message
+        """
+        print(f"獲取 user ID {self.user_id} 的提醒方法")
+        try:
+            response = supabase_admin.from_("profiles").select("reminder_method").eq("id", self.user_id).execute()
+            
+            if not response.data:
+                error_msg = f"找不到 user ID {self.user_id} 的 profile 記錄"
+                print(error_msg)
+                return error_msg
+            
+            reminder_method = response.data[0].get("reminder_method", "app")
+            print(f"目前的提醒方法：{reminder_method}")
+            return reminder_method
+        except Exception as e:
+            error_msg = f"獲取提醒方法時發生錯誤：{str(e)}"
+            print(error_msg)
+            return error_msg
+
+    def set_reminder_method(self, reminder_method: str) -> str:
+        """
+        Update reminder delivery method for the user in Supabase
+        
+        Args:
+            reminder_method: The reminder method to set
+            
+        Returns:
+            str: Success message or error message
+        """
+        print(f"設定 user ID {self.user_id} 的提醒方法為：{reminder_method}")
+        try:
+            allowed_methods = ["notification", "notification-long"]
+            normalized_method = reminder_method.lower()
+            
+            if normalized_method not in allowed_methods:
+                return f"錯誤：提醒方法 '{reminder_method}' 不被支援。允許的值有：{', '.join(allowed_methods)}"
+            
+            response = supabase_admin.from_("profiles").update({
+                "reminder_method": normalized_method
+            }).eq("id", self.user_id).execute()
+            
+            if response.data:
+                print(f"成功設定用戶 {self.user_id} 的提醒方法為：{normalized_method}")
+                return f"成功設定提醒方法為：{normalized_method}"
+            else:
+                error_msg = f"更新提醒方法失敗，找不到用戶 {self.user_id}"
+                print(error_msg)
+                return error_msg
+        except Exception as e:
+            error_msg = f"設定提醒方法時發生錯誤：{str(e)}"
+            print(error_msg)
+            return error_msg
+    
     def create_reminder(self, remind_at: str, method: str, description: str,
                        is_recurring: bool = False, recurrence_rule: Optional[str] = None,
                        recurrence_exceptions: Optional[str] = None) -> str:
         """
-        Create a new reminder with subscription limit check
+        Create a new reminder.
         
         Args:
             remind_at: Reminder time (user local time or ISO format with timezone)
@@ -80,8 +137,8 @@ class UserReminderManager:
             current_reminders_count = reminders_response.count if reminders_response.count is not None else 0
             
             if current_reminders_count >= Constants.REMINDERS_MAX:
-                print(f"超過最大提醒上限：{Constants.REMINDERS_MAX}")
-                return f"無法新增提醒：達到最大提醒上限，最多只能新增 {Constants.REMINDERS_MAX} 個提醒"
+                print(f"超過最大提醒數量上限：{Constants.REMINDERS_MAX}")
+                return f"無法新增提醒：達到最大提醒數量上限，最多只能存在 {Constants.REMINDERS_MAX} 個提醒"
             
             
             # Process recurrence_exceptions string to array
