@@ -1,310 +1,306 @@
-from types import SimpleNamespace
-
 import pytest
+from pytest_mock import MockFixture
 
 from app.core.constants import Constants
 from app.lib.user_note_manager import UserNoteManager
+from tests.mock_supabase_admin import MockSupabaseAdmin, create_mock_response
 
 
-class FakeSupabase:
-    """Minimal Supabase stub returning predefined responses per execute call."""
+def test_create_note_success(mocker: MockFixture):
+    """Test creating a note successfully"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(count=5),  # Current count
+        create_mock_response(data=[]),  # No duplicate title
+        create_mock_response(data=[{"id": "note-123", "title": "Test Note", "content": "Test content"}])  # Insert
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    def __init__(self, responses):
-        self.responses = list(responses)
-        self.select_calls = []
-        self.eq_calls = []
-        self.or_calls = []
-        self.insert_payloads = []
-        self.update_payloads = []
-        self.delete_calls = 0
-        self.table = None
-
-    def from_(self, table):
-        self.table = table
-        return self
-
-    def select(self, *args, **kwargs):
-        self.select_calls.append((args, kwargs))
-        return self
-
-    def eq(self, *args, **kwargs):
-        self.eq_calls.append((args, kwargs))
-        return self
-
-    def or_(self, condition):
-        self.or_calls.append(condition)
-        return self
-
-    def insert(self, payload):
-        self.insert_payloads.append(payload)
-        return self
-
-    def update(self, payload):
-        self.update_payloads.append(payload)
-        return self
-
-    def delete(self):
-        self.delete_calls += 1
-        return self
-
-    def execute(self):
-        if not self.responses:
-            raise AssertionError("No more stub responses available")
-        return self.responses.pop(0)
-
-
-def make_response(data=None, count=None):
-    return SimpleNamespace(data=data, count=count)
-
-
-def test_create_note_success(monkeypatch):
-    responses = [
-        make_response(data=[], count=0),  # count check
-        make_response(data=[], count=None),  # duplicate check
-        make_response(data=[{"id": "note-1"}], count=None),  # insert result
-    ]
-    fake_supabase = FakeSupabase(responses)
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
-
-    manager = UserNoteManager("user-123")
-    result = manager.create_note("Daily log", "content")
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440000")
+    result = manager.create_note("Test Note", "Test content")
 
     assert "成功添加筆記" in result
-    assert fake_supabase.insert_payloads[0]["title"] == "Daily log"
+    assert "note-123" in result
+    
+    # Verify insert was called
+    last_insert = mock_admin.get_last_insert("notes")
+    assert last_insert["payload"]["title"] == "Test Note"
+    assert last_insert["payload"]["content"] == "Test content"
 
 
-def test_create_note_reaches_limit(monkeypatch):
-    responses = [
-        make_response(data=[], count=Constants.NOTES_MAX),  # simulate reaching cap
+def test_create_note_exceeds_limit(mocker: MockFixture):
+    """Test creating note when exceeding limit"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(count=Constants.NOTES_MAX)  # At max limit
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
+
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440001")
+    result = manager.create_note("Test Note", "Test content")
+
+    assert "達到最大筆記上限" in result
+    # Should not insert
+    assert mock_admin.get_call_count("insert", "notes") == 0
+
+
+def test_create_note_duplicate_title(mocker: MockFixture):
+    """Test creating note with duplicate title"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(count=5),  # Current count
+        create_mock_response(data=[{"id": "note-1", "title": "Test Note", "content": "Existing content"}])  # Duplicate title
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
+
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440002")
+    result = manager.create_note("Test Note", "New content")
+
+    assert "已存在相同的 Title: Test Note 記錄" in result
+
+
+def test_read_notes_success(mocker: MockFixture):
+    """Test reading notes successfully"""
+    mock_data = [
+        {
+            "id": "note-1",
+            "title": "Note 1",
+            "content": "Content 1",
+            "created_at": "2024-01-01T10:00:00Z",
+            "updated_at": "2024-01-01T10:00:00Z"
+        },
+        {
+            "id": "note-2", 
+            "title": "Note 2",
+            "content": "Content 2",
+            "created_at": "2024-01-02T10:00:00Z",
+            "updated_at": "2024-01-02T10:00:00Z"
+        }
     ]
-    fake_supabase = FakeSupabase(responses)
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
+    
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=mock_data)
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    manager = UserNoteManager("user-123")
-    result = manager.create_note("Daily log", "content")
-
-    assert "無法新增筆記" in result
-    assert str(Constants.NOTES_MAX) in result
-
-
-def test_create_note_duplicate_title(monkeypatch):
-    responses = [
-        make_response(data=[], count=1),
-        make_response(data=[{"id": "existing"}], count=None),
-    ]
-    fake_supabase = FakeSupabase(responses)
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
-
-    manager = UserNoteManager("user-123")
-    result = manager.create_note("Daily log", "content")
-
-    assert "已存在相同" in result
-
-
-def test_read_notes_returns_formatted_content(monkeypatch):
-    responses = [
-        make_response(
-            data=[
-                {
-                    "id": "note-1",
-                    "title": "Daily log",
-                    "content": "something",
-                    "created_at": "2024-01-01",
-                    "updated_at": "2024-01-02",
-                }
-            ]
-        )
-    ]
-    fake_supabase = FakeSupabase(responses)
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
-
-    manager = UserNoteManager("user-123")
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440003")
     result = manager.read_notes()
 
     assert "ID: note-1" in result
-    assert "Daily log" in result
+    assert "Note 1" in result
+    assert "ID: note-2" in result
+    assert "Note 2" in result
 
 
-def test_read_notes_empty(monkeypatch):
-    fake_supabase = FakeSupabase([make_response(data=[])])
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
+def test_read_notes_empty(mocker: MockFixture):
+    """Test reading notes when none exist"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=[])
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    manager = UserNoteManager("user-123")
-    assert manager.read_notes() == "No notes found"
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440004")
+    result = manager.read_notes()
+
+    assert "No notes found" in result
 
 
-def test_read_note_success(monkeypatch):
-    responses = [
-        make_response(
-            data=[
-                {
-                    "id": "note-1",
-                    "title": "Daily log",
-                    "content": "something",
-                    "created_at": "2024-01-01",
-                    "updated_at": "2024-01-02",
-                }
-            ]
-        )
-    ]
-    fake_supabase = FakeSupabase(responses)
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
+def test_read_single_note_success(mocker: MockFixture):
+    """Test reading a single note successfully"""
+    mock_data = [{
+        "id": "note-1",
+        "title": "Single Note",
+        "content": "Single Content",
+        "created_at": "2024-01-01T10:00:00Z",
+        "updated_at": "2024-01-01T10:00:00Z"
+    }]
+    
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=mock_data)
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    manager = UserNoteManager("user-123")
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440005")
     result = manager.read_note("note-1")
 
     assert "ID: note-1" in result
-    assert "Daily log" in result
+    assert "Single Note" in result
+    assert "Single Content" in result
 
 
-def test_read_note_not_found(monkeypatch):
-    fake_supabase = FakeSupabase([make_response(data=[])])
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
+def test_read_single_note_not_found(mocker: MockFixture):
+    """Test reading a single note that doesn't exist"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=[])
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    manager = UserNoteManager("user-123")
-    result = manager.read_note("missing")
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440006")
+    result = manager.read_note("non-existent-id")
 
-    assert "找不到 ID missing" in result
-
-
-def test_update_note_success(monkeypatch):
-    responses = [
-        make_response(data=[{"id": "note-1"}]),
-        make_response(data=[{"id": "note-1"}]),
-    ]
-    fake_supabase = FakeSupabase(responses)
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
-
-    manager = UserNoteManager("user-123")
-    assert manager.update_note("note-1", "New title", "New content") is True
-    assert fake_supabase.update_payloads[0]["title"] == "New title"
+    assert "找不到 ID non-existent-id 的筆記記錄" in result
 
 
-def test_update_note_not_found(monkeypatch):
-    fake_supabase = FakeSupabase([make_response(data=[])])
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
+def test_update_note_success(mocker: MockFixture):
+    """Test updating a note successfully"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=[{"id": "note-1"}]),  # Check existence
+        create_mock_response(data=[{"id": "note-1", "title": "Updated Title"}])  # Update result
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    manager = UserNoteManager("user-123")
-    assert manager.update_note("missing", "Title", "Content") is False
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440007")
+    result = manager.update_note("note-1", "Updated Title", "Updated Content")
+
+    assert result == True
+    
+    # Check update was called
+    last_update = mock_admin.get_last_update("notes")
+    assert last_update["payload"]["title"] == "Updated Title"
+    assert last_update["payload"]["content"] == "Updated Content"
 
 
-def test_delete_note_success(monkeypatch):
-    responses = [
-        make_response(data=[{"id": "note-1"}]),
-        make_response(data=[{"id": "note-1"}]),
-    ]
-    fake_supabase = FakeSupabase(responses)
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
+def test_update_note_not_found(mocker: MockFixture):
+    """Test updating a note that doesn't exist"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=[])  # Not found
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    manager = UserNoteManager("user-123")
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440008")
+    result = manager.update_note("non-existent-id", "Title", "Content")
+
+    assert result == False
+
+
+def test_delete_note_success(mocker: MockFixture):
+    """Test deleting a note successfully"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=[{"id": "note-1"}]),  # Check existence
+        create_mock_response(data=[{"id": "note-1"}])  # Delete result
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
+
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440009")
     result = manager.delete_note("note-1")
 
     assert "成功刪除筆記記錄" in result
-    assert fake_supabase.delete_calls == 1
+    assert mock_admin.get_call_count("delete", "notes") == 1
 
 
-def test_delete_note_not_found(monkeypatch):
-    fake_supabase = FakeSupabase([make_response(data=[])])
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
+def test_delete_note_not_found(mocker: MockFixture):
+    """Test deleting a note that doesn't exist"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=[])  # Not found
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    manager = UserNoteManager("user-123")
-    result = manager.delete_note("missing")
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440010")
+    result = manager.delete_note("non-existent-id")
 
-    assert "找不到 ID missing" in result
-
-
-def test_search_notes_success(monkeypatch):
-    responses = [
-        make_response(
-            data=[
-                {
-                    "id": "note-1",
-                    "title": "Daily log",
-                    "content": "something",
-                    "created_at": "2024-01-01",
-                    "updated_at": "2024-01-02",
-                }
-            ]
-        )
-    ]
-    fake_supabase = FakeSupabase(responses)
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
-
-    manager = UserNoteManager("user-123")
-    result = manager.search_notes("log")
-
-    assert "Daily log" in result
+    assert "找不到 ID non-existent-id 的筆記記錄" in result
 
 
-def test_search_notes_no_match(monkeypatch):
-    fake_supabase = FakeSupabase([make_response(data=[])])
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
+def test_search_notes_success(mocker: MockFixture):
+    """Test searching notes by keyword successfully"""
+    mock_data = [{
+        "id": "note-1",
+        "title": "Meeting Notes",
+        "content": "Important discussion points",
+        "created_at": "2024-01-01T10:00:00Z",
+        "updated_at": "2024-01-01T10:00:00Z"
+    }]
+    
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=mock_data)
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    manager = UserNoteManager("user-123")
-    result = manager.search_notes("log")
-
-    assert "沒有找到包含關鍵字" in result
-
-
-def test_search_notes_by_time_success(monkeypatch):
-    responses = [
-        make_response(
-            data=[
-                {
-                    "id": "note-1",
-                    "title": "Daily log",
-                    "content": "note",
-                    "created_at": "2024-01-01T01:00:00Z",
-                    "updated_at": "2024-01-02T02:00:00Z",
-                }
-            ]
-        )
-    ]
-    fake_supabase = FakeSupabase(responses)
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
-
-    conversions = iter(
-        [
-            ("2024-01-01T00:00:00Z", {"status": "success"}),
-            ("2024-01-02T00:00:00Z", {"status": "success"}),
-        ]
-    )
-
-    def fake_convert(_user_id, _value):
-        return next(conversions)
-
-    monkeypatch.setattr(
-        "app.lib.user_note_manager.convert_user_local_to_utc_time",
-        fake_convert,
-    )
-
-    manager = UserNoteManager("user-123")
-    result = manager.search_notes_by_time("2024-01-01 08:00:00", "2024-01-02 08:00:00")
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440011")
+    result = manager.search_notes("meeting")
 
     assert "ID: note-1" in result
-    assert "Daily log" in result
+    assert "Meeting Notes" in result
 
 
-def test_search_notes_by_time_conversion_error(monkeypatch):
-    fake_supabase = FakeSupabase([])
-    monkeypatch.setattr("app.lib.user_note_manager.supabase_admin", fake_supabase)
+def test_search_notes_no_results(mocker: MockFixture):
+    """Test searching notes by keyword with no results"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=[])
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
 
-    conversions = iter(
-        [
-            ("invalid", {"error": "格式錯誤"}),
-            ("should-not-be-used", {"status": "success"}),
-        ]
-    )
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440012")
+    result = manager.search_notes("nonexistent")
 
-    def fake_convert(_user_id, _value):
-        return next(conversions)
+    assert "沒有找到包含關鍵字 'nonexistent' 的筆記" in result
 
-    monkeypatch.setattr(
-        "app.lib.user_note_manager.convert_user_local_to_utc_time",
-        fake_convert,
-    )
 
-    manager = UserNoteManager("user-123")
-    result = manager.search_notes_by_time("bad", "worse")
+def test_search_notes_by_time_success(mocker: MockFixture):
+    """Test searching notes by time range successfully"""
+    mock_data = [{
+        "id": "note-1",
+        "title": "Time Note",
+        "content": "Content created in time range",
+        "created_at": "2024-01-15T10:00:00Z",
+        "updated_at": "2024-01-15T10:00:00Z"
+    }]
+    
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=mock_data)
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
+    
+    # Mock the time conversion functions
+    mocker.patch('app.lib.user_note_manager.convert_user_local_to_utc_time', 
+                 side_effect=[("2024-01-01T02:00:00Z", {}), ("2024-01-31T02:00:00Z", {})])
+
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440013")
+    result = manager.search_notes_by_time("2024-01-01 10:00:00", "2024-01-31 10:00:00")
+
+    assert "ID: note-1" in result
+    assert "Time Note" in result
+
+
+def test_search_notes_by_time_no_results(mocker: MockFixture):
+    """Test searching notes by time range with no results"""
+    mock_admin = MockSupabaseAdmin()
+    mock_admin.set_responses("notes", [
+        create_mock_response(data=[])
+    ])
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
+    
+    # Mock the time conversion functions
+    mocker.patch('app.lib.user_note_manager.convert_user_local_to_utc_time', 
+                 side_effect=[("2024-01-01T02:00:00Z", {}), ("2024-01-31T02:00:00Z", {})])
+
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440014")
+    result = manager.search_notes_by_time("2024-01-01 10:00:00", "2024-01-31 10:00:00")
+
+    assert "沒有找到在時間範圍 '2024-01-01 10:00:00' 到 '2024-01-31 10:00:00' 之間創建或更新的筆記" in result
+
+
+def test_search_notes_by_time_conversion_error(mocker: MockFixture):
+    """Test searching notes by time range with conversion error"""
+    mock_admin = MockSupabaseAdmin()
+    mocker.patch('app.lib.user_note_manager.supabase_admin', mock_admin)
+    
+    # Mock the time conversion functions to return error
+    mocker.patch('app.lib.user_note_manager.convert_user_local_to_utc_time', 
+                 side_effect=[("", {"error": "Invalid time format"}), ("", {})])
+
+    manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440015")
+    result = manager.search_notes_by_time("invalid-time", "2024-01-31 10:00:00")
 
     assert "時間轉換失敗" in result

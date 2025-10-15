@@ -1,8 +1,11 @@
+import pytest
+from pytest_mock import MockFixture
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.v1.endpoints.chatbot_manager import router
 from app.core import config
+from tests.mock_supabase_admin import MockSupabaseAdmin, create_mock_response
 
 
 def make_client():
@@ -11,18 +14,19 @@ def make_client():
     return TestClient(app)
 
 
-def test_reset_chatbot_success(monkeypatch):
+def test_reset_chatbot_success(mocker: MockFixture):
+    """Test successful chatbot reset"""
     client = make_client()
-    monkeypatch.setattr(config.settings, "PRIVATE_ACCESS_TOKEN", "secret-token")
+    mocker.patch.object(config.settings, "PRIVATE_ACCESS_TOKEN", "secret-token")
     called = {}
 
     def fake_reset(chatbot_id):
         called["id"] = chatbot_id
         return True
 
-    monkeypatch.setattr(
+    mocker.patch(
         "app.api.v1.endpoints.chatbot_manager.chatbot_manager.reset_chatbot",
-        fake_reset,
+        side_effect=fake_reset,
     )
 
     response = client.post(
@@ -40,13 +44,14 @@ def test_reset_chatbot_success(monkeypatch):
     assert called["id"] == "bot-123"
 
 
-def test_reset_chatbot_failure(monkeypatch):
+def test_reset_chatbot_failure(mocker: MockFixture):
+    """Test chatbot reset failure"""
     client = make_client()
-    monkeypatch.setattr(config.settings, "PRIVATE_ACCESS_TOKEN", "secret-token")
+    mocker.patch.object(config.settings, "PRIVATE_ACCESS_TOKEN", "secret-token")
 
-    monkeypatch.setattr(
+    mocker.patch(
         "app.api.v1.endpoints.chatbot_manager.chatbot_manager.reset_chatbot",
-        lambda _: False,
+        return_value=False,
     )
 
     response = client.post(
@@ -60,7 +65,8 @@ def test_reset_chatbot_failure(monkeypatch):
     assert response.json()["message"] == "聊天機器人重設失敗或不存在"
 
 
-def test_reset_chatbot_missing_authorization(monkeypatch):
+def test_reset_chatbot_missing_authorization():
+    """Test missing authorization header"""
     client = make_client()
     response = client.post(
         "/api/v1/chatbot-manager/reset-chatbot",
@@ -71,7 +77,8 @@ def test_reset_chatbot_missing_authorization(monkeypatch):
     assert response.json()["detail"] == "缺少 authorization header"
 
 
-def test_reset_chatbot_invalid_authorization_format(monkeypatch):
+def test_reset_chatbot_invalid_authorization_format():
+    """Test invalid authorization format"""
     client = make_client()
     response = client.post(
         "/api/v1/chatbot-manager/reset-chatbot",
@@ -83,9 +90,10 @@ def test_reset_chatbot_invalid_authorization_format(monkeypatch):
     assert response.json()["detail"] == "無效的 authorization 格式"
 
 
-def test_reset_chatbot_invalid_token(monkeypatch):
+def test_reset_chatbot_invalid_token(mocker: MockFixture):
+    """Test invalid JWT token"""
     client = make_client()
-    monkeypatch.setattr(config.settings, "PRIVATE_ACCESS_TOKEN", "secret-token")
+    mocker.patch.object(config.settings, "PRIVATE_ACCESS_TOKEN", "secret-token")
 
     response = client.post(
         "/api/v1/chatbot-manager/reset-chatbot",
@@ -97,16 +105,17 @@ def test_reset_chatbot_invalid_token(monkeypatch):
     assert response.json()["detail"] == "無效的 JWT token"
 
 
-def test_reset_chatbot_internal_error(monkeypatch):
+def test_reset_chatbot_internal_error(mocker: MockFixture):
+    """Test internal server error handling"""
     client = make_client()
-    monkeypatch.setattr(config.settings, "PRIVATE_ACCESS_TOKEN", "secret-token")
+    mocker.patch.object(config.settings, "PRIVATE_ACCESS_TOKEN", "secret-token")
 
     def boom(_):
         raise RuntimeError("炸掉了")
 
-    monkeypatch.setattr(
+    mocker.patch(
         "app.api.v1.endpoints.chatbot_manager.chatbot_manager.reset_chatbot",
-        boom,
+        side_effect=boom,
     )
 
     response = client.post(
