@@ -58,11 +58,35 @@ class ReminderManager:
                 # 工作日提醒
                 return today.weekday() < 5  # Monday=0, Friday=4
             elif 'FREQ=WEEKLY' in recurrence_rule:
-                # 每週提醒 - 檢查是否為相同的星期幾
-                return remind_at.weekday() == today.weekday()
+                # 每週提醒 - 支援多個星期幾
+                if 'BYDAY=' in recurrence_rule:
+                    # 解析多個星期幾
+                    byday_match = re.search(r'BYDAY=([^;]+)', recurrence_rule)
+                    if byday_match:
+                        days = byday_match.group(1).split(',')
+                        today_weekday_code = self._get_weekday_code(today.weekday())
+                        return today_weekday_code in [day.strip() for day in days]
+                else:
+                    # 沒有 BYDAY，使用原始提醒的星期幾
+                    return remind_at.weekday() == today.weekday()
             elif 'FREQ=MONTHLY' in recurrence_rule:
-                # 每月提醒 - 檢查是否為相同的日期
-                return remind_at.day == today.day
+                # 每月提醒 - 支援多個日期
+                if 'BYMONTHDAY=' in recurrence_rule:
+                    # 解析多個日期
+                    bymonthday_match = re.search(r'BYMONTHDAY=([^;]+)', recurrence_rule)
+                    if bymonthday_match:
+                        days = bymonthday_match.group(1).split(',')
+                        try:
+                            target_days = [int(day.strip()) for day in days if day.strip().isdigit()]
+                            return today.day in target_days
+                        except ValueError:
+                            # 如果解析失敗，回退到原始邏輯
+                            return remind_at.day == today.day
+                    else:
+                        return remind_at.day == today.day
+                else:
+                    # 沒有 BYMONTHDAY，使用原始提醒的日期
+                    return remind_at.day == today.day
             elif 'FREQ=YEARLY' in recurrence_rule:
                 # 每年提醒 - 檢查是否為相同的月份和日期
                 return remind_at.month == today.month and remind_at.day == today.day
@@ -434,6 +458,19 @@ class ReminderManager:
         except Exception as e:
             print(f"解析多個日期時發生錯誤：{str(e)}")
             return []
+    
+    def _get_weekday_code(self, weekday: int) -> str:
+        """
+        將 Python weekday 數字轉換為 iCalendar 星期幾代碼
+        
+        Args:
+            weekday: Python weekday (0=Monday, 6=Sunday)
+            
+        Returns:
+            str: iCalendar 星期幾代碼 (MO, TU, WE, TH, FR, SA, SU)
+        """
+        weekday_codes = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+        return weekday_codes[weekday] if 0 <= weekday <= 6 else "MO"
     
     def _convert_weekday_code(self, code: str) -> str:
         """
