@@ -24,7 +24,9 @@ def create_create_reminder_tool(user_id: str) -> StructuredTool:
         description="""
             添加新的提醒，需要提供 remind_at、method、description 等參數。
             remind_at 請使用用戶本地時間（格式：YYYY-MM-DD HH:MM:SS），系統會自動轉換為 UTC 時間儲存。
-            method 支援 notification、notification-long。
+            method 支援 notification（通知）和 alarm（鬧鐘）兩種方式：
+            - notification: 一般通知提醒（預設）
+            - alarm: 鬧鐘提醒，適合需要更強烈提醒的場景
             is_recurring 設定是否為重複提醒（預設 false）。
             recurrence_rule 使用 iCalendar RRULE 格式設定重複規則，例如：
             - 每日：FREQ=DAILY
@@ -88,7 +90,7 @@ def create_update_reminder_tool(user_id: str) -> StructuredTool:
             更新智能助理的提醒內容，
             需要提供 id、remind_at、description、method 等參數，
             時間參數時請用本地時間設定 remind_at;
-            method 支援 notification 或 app 或 line。
+            method 支援 notification（通知）或 alarm（鬧鐘）。
             """
     )
 

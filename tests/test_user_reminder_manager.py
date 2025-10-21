@@ -217,7 +217,7 @@ def test_create_weekly_recurring_reminder(mocker: MockFixture):
     manager = UserReminderManager("550e8400-e29b-41d4-a716-446655440008")
     result = manager.create_reminder(
         remind_at="2024-12-25 14:00:00",
-        method="notification-long",
+        method="alarm",
         description="Weekly team meeting",
         is_recurring=True,
         recurrence_rule="FREQ=WEEKLY;BYDAY=WE"
@@ -228,7 +228,7 @@ def test_create_weekly_recurring_reminder(mocker: MockFixture):
     
     # Check insert payload
     last_insert = mock_admin.get_last_insert("reminders")
-    assert last_insert["payload"]["method"] == "notification-long"
+    assert last_insert["payload"]["method"] == "alarm"
     assert last_insert["payload"]["recurrence_rule"] == "FREQ=WEEKLY;BYDAY=WE"
 
 
@@ -412,7 +412,7 @@ def test_read_reminders_success(mocker: MockFixture):
             id="reminder-2", 
             description="Test reminder 2",
             remind_at="2024-12-26T14:00:00Z",
-            method="notification-long",
+            method="alarm",
             is_sent=True,
             sent_at="2024-12-26T14:00:00Z"
         )
@@ -463,7 +463,7 @@ def test_update_reminder_success(mocker: MockFixture):
         id="reminder-1",
         remind_at="2024-12-26T11:00:00Z",
         description="Updated reminder",
-        method="notification-long"
+        method="alarm"
     )
 
     assert result == True

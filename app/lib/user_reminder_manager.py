@@ -48,14 +48,14 @@ class UserReminderManager:
         Update reminder delivery method for the user in Supabase
         
         Args:
-            reminder_method: The reminder method to set
+            reminder_method: The reminder method to set ('notification' or 'alarm')
             
         Returns:
             str: Success message or error message
         """
         print(f"設定 user ID {self.user_id} 的提醒方法為：{reminder_method}")
         try:
-            allowed_methods = ["notification", "notification-long"]
+            allowed_methods = ["notification", "alarm"]
             normalized_method = reminder_method.lower()
             
             if normalized_method not in allowed_methods:
@@ -85,7 +85,7 @@ class UserReminderManager:
         
         Args:
             remind_at: Reminder time (user local time or ISO format with timezone)
-            method: Reminder method ('notification' or 'notification-long')
+            method: Reminder method ('notification' or 'alarm')
             description: Reminder description
             is_recurring: Whether this is a recurring reminder
             recurrence_rule: Recurrence rule in iCalendar RRULE format
@@ -96,90 +96,49 @@ class UserReminderManager:
         """
         method = method.lower()
         print(f"添加提醒： Remind At {remind_at}, Method {method}, Description {description}")
+        
         try:
-            # Convert remind_at to UTC time
-            try:
-                if '+' in remind_at or 'Z' in remind_at:
-                    # Time with timezone info, parse directly
-                    if remind_at.endswith('Z'):
-                        remind_at = remind_at.replace('Z', '+00:00')
-                    remind_dt = datetime.fromisoformat(remind_at)
-                    
-                    # Convert to UTC
-                    if remind_dt.tzinfo is None:
-                        remind_dt = remind_dt.replace(tzinfo=timezone.utc)
-                    else:
-                        remind_dt = remind_dt.astimezone(timezone.utc)
-                    
-                    # Format as UTC time string (ISO 8601 format with Z suffix)
-                    remind_at_utc = remind_dt.isoformat().replace('+00:00', 'Z')
-                else:
-                    # Assume user local time, convert to UTC using UserTimeManager
-                    try:
-                        remind_at_utc = self.time_manager.convert_local_to_utc_time(remind_at)
-                    except Exception as convert_error:
-                        return f"錯誤：時間格式不正確，請使用本地時間格式 YYYY-MM-DD HH:MM:SS 或包含時區的格式 YYYY-MM-DDTHH:MM:SS+HH:MM"
-                
-            except ValueError as e:
-                return f"錯誤：時間格式不正確，請使用格式 YYYY-MM-DD HH:MM:SS 或 YYYY-MM-DDTHH:MM:SS+HH:MM，錯誤詳情：{str(e)}"
-            
-            # Validate method
-            valid_methods = ['notification', 'notification-long']
+            # 1. Validate method first
+            valid_methods = ['notification', 'alarm']
             if method not in valid_methods:
                 return f"錯誤：method 必須是 {', '.join(valid_methods)} 其中之一"
             
-            # Validate recurrence_rule if recurring
+            # 2. Validate recurrence_rule if recurring
             if is_recurring and not recurrence_rule:
                 return f"錯誤：設定為重複提醒時必須提供 recurrence_rule"
             
-            # Get current active reminders count
-            reminders_response = supabase_admin.from_("reminders").select("id", count="exact").eq("user_id", self.user_id).eq("status", "active").execute()
-            current_reminders_count = reminders_response.count if reminders_response.count is not None else 0
+            # 3. Convert remind_at to UTC time
+            remind_at_utc = self._convert_to_utc_time(remind_at)
+            if remind_at_utc.startswith("錯誤"):
+                return remind_at_utc
             
-            if current_reminders_count >= Constants.REMINDERS_MAX:
-                print(f"超過最大提醒數量上限：{Constants.REMINDERS_MAX}")
+            # 4. Check reminders count limit
+            if not self._check_reminders_limit():
                 return f"無法新增提醒：達到最大提醒數量上限，最多只能存在 {Constants.REMINDERS_MAX} 個提醒"
             
+            # 5. Process recurrence_exceptions
+            recurrence_exceptions_array = self._process_recurrence_exceptions(recurrence_exceptions)
+            if isinstance(recurrence_exceptions_array, str) and recurrence_exceptions_array.startswith("錯誤"):
+                return recurrence_exceptions_array
             
-            # Process recurrence_exceptions string to array
-            recurrence_exceptions_array = None
-            if recurrence_exceptions:
-                try:
-                    exceptions_list = [exc.strip() for exc in recurrence_exceptions.split(',')]
-                    recurrence_exceptions_array = exceptions_list
-                except Exception as e:
-                    print(f"處理 recurrence_exceptions 時發生錯誤：{str(e)}")
-                    return f"錯誤：recurrence_exceptions 格式不正確"
+            # 6. Check for duplicate reminders (only for non-recurring)
+            if not is_recurring and self._is_duplicate_reminder(remind_at_utc, method):
+                return f"已存在相同的提醒記錄"
             
-            # Check for duplicate reminders (only for non-recurring)
-            if not is_recurring:
-                response = supabase_admin.from_("reminders").select("*").eq("user_id", self.user_id).eq("remind_at", remind_at_utc).eq("method", method).execute()
-                
-                if response.data:
-                    return f"已存在相同的提醒記錄"
+            # 7. Prepare and insert reminder data
+            insert_data = self._prepare_reminder_data(
+                remind_at_utc, method, description, 
+                is_recurring, recurrence_rule, recurrence_exceptions_array
+            )
             
-            # Prepare insert data (use UTC time)
-            insert_data = {
-                "user_id": self.user_id,
-                "description": description,
-                "remind_at": remind_at_utc,  # Use UTC time
-                "method": method,
-                "is_recurring": is_recurring
-            }
-            
-            # Add optional fields
-            if recurrence_rule:
-                insert_data["recurrence_rule"] = recurrence_rule
-            if recurrence_exceptions_array:
-                insert_data["recurrence_exceptions"] = recurrence_exceptions_array
-            
-            # Insert new record
+            # 8. Insert into database
             result = supabase_admin.from_("reminders").insert(insert_data).execute()
             
             if result.data:
                 new_record = result.data[0]
+                method_display = "鬧鐘" if method == "alarm" else "通知"
                 recurring_info = f", 重複提醒: {'是' if is_recurring else '否'}"
-                return f"成功添加提醒，ID: {new_record.get('id', '')}, Remind At (UTC): {remind_at_utc}{recurring_info}"
+                return f"成功添加提醒，方式: {method_display}, ID: {new_record.get('id', '')}, Remind At (UTC): {remind_at_utc}{recurring_info}"
             else:
                 return "添加提醒失敗"
                 
@@ -187,6 +146,114 @@ class UserReminderManager:
             error_msg = f"添加提醒時發生錯誤：{str(e)}"
             print(error_msg)
             return error_msg
+    
+    def _convert_to_utc_time(self, remind_at: str) -> str:
+        """
+        Convert remind_at time to UTC format using UserTimeManager
+        
+        Args:
+            remind_at: Time string in local or ISO format
+            
+        Returns:
+            str: UTC time string or error message
+        """
+        try:
+            # Use UserTimeManager to handle time conversion
+            # This handles both local time and ISO format with timezone
+            return self.time_manager.convert_local_to_utc_time(remind_at)
+        except Exception as e:
+            error_msg = f"錯誤：時間格式不正確，請使用本地時間格式 YYYY-MM-DD HH:MM:SS 或包含時區的格式 YYYY-MM-DDTHH:MM:SS+HH:MM。錯誤詳情：{str(e)}"
+            print(error_msg)
+            return error_msg
+    
+    def _check_reminders_limit(self) -> bool:
+        """
+        Check if user has reached the maximum reminders limit
+        
+        Returns:
+            bool: True if under limit, False otherwise
+        """
+        reminders_response = supabase_admin.from_("reminders").select(
+            "id", count="exact"
+        ).eq("user_id", self.user_id).eq("status", "active").execute()
+        
+        current_reminders_count = reminders_response.count if reminders_response.count is not None else 0
+        
+        if current_reminders_count >= Constants.REMINDERS_MAX:
+            print(f"超過最大提醒數量上限：{Constants.REMINDERS_MAX}")
+            return False
+        
+        return True
+    
+    def _process_recurrence_exceptions(self, recurrence_exceptions: Optional[str]) -> Optional[List[str]]:
+        """
+        Process recurrence_exceptions string into array
+        
+        Args:
+            recurrence_exceptions: Comma-separated exception dates string
+            
+        Returns:
+            List of exception dates or None if not provided, or error message string
+        """
+        if not recurrence_exceptions:
+            return None
+        
+        try:
+            exceptions_list = [exc.strip() for exc in recurrence_exceptions.split(',')]
+            return exceptions_list
+        except Exception as e:
+            print(f"處理 recurrence_exceptions 時發生錯誤：{str(e)}")
+            return "錯誤：recurrence_exceptions 格式不正確"
+    
+    def _is_duplicate_reminder(self, remind_at_utc: str, method: str) -> bool:
+        """
+        Check if a duplicate reminder already exists
+        
+        Args:
+            remind_at_utc: UTC time string
+            method: Reminder method
+            
+        Returns:
+            bool: True if duplicate exists, False otherwise
+        """
+        response = supabase_admin.from_("reminders").select("*").eq(
+            "user_id", self.user_id
+        ).eq("remind_at", remind_at_utc).eq("method", method).execute()
+        
+        return bool(response.data)
+    
+    def _prepare_reminder_data(self, remind_at_utc: str, method: str, description: str,
+                              is_recurring: bool, recurrence_rule: Optional[str],
+                              recurrence_exceptions_array: Optional[List[str]]) -> Dict[str, Any]:
+        """
+        Prepare reminder data for database insertion
+        
+        Args:
+            remind_at_utc: UTC time string
+            method: Reminder method
+            description: Reminder description
+            is_recurring: Whether this is recurring
+            recurrence_rule: Recurrence rule string
+            recurrence_exceptions_array: List of exception dates
+            
+        Returns:
+            Dict containing reminder data
+        """
+        insert_data = {
+            "user_id": self.user_id,
+            "description": description,
+            "remind_at": remind_at_utc,
+            "method": method,
+            "is_recurring": is_recurring
+        }
+        
+        # Add optional fields
+        if recurrence_rule:
+            insert_data["recurrence_rule"] = recurrence_rule
+        if recurrence_exceptions_array:
+            insert_data["recurrence_exceptions"] = recurrence_exceptions_array
+        
+        return insert_data
     
     def read_reminders(self) -> str:
         """
