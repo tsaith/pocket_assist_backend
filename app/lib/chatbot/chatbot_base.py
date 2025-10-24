@@ -416,7 +416,7 @@ class ChatbotBase:
                 strategy="last",
                 token_counter=count_tokens_approximately,
                 include_system=True,
-                max_tokens=2000,
+                max_tokens=100000,
                 start_on="human",
                 end_on=("human", "tool"),
             )
