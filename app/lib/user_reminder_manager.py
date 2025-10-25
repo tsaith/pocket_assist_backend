@@ -19,6 +19,23 @@ class UserReminderManager:
         self.user_id = user_id
         self.time_manager = UserTimeManager(user_id)
     
+    def get_reminder_count(self) -> int:
+        """
+        Get the count of user's active reminders
+        
+        Returns:
+            int: Number of active reminders for the user
+        """
+        print(f"取得提醒數量 from user_id：{self.user_id}")
+        try:
+            response = supabase_admin.from_("reminders").select("*", count="exact").eq("user_id", self.user_id).eq("status", "active").execute()
+            count = response.count if response.count is not None else 0
+            print(f"提醒數量：{count}")
+            return count
+        except Exception as e:
+            print(f"取得提醒數量時發生錯誤：{str(e)}")
+            return 0
+    
     def get_reminder_method(self) -> str:
         """
         Retrieve reminder delivery method for the user from Supabase
@@ -107,14 +124,14 @@ class UserReminderManager:
             if is_recurring and not recurrence_rule:
                 return f"錯誤：設定為重複提醒時必須提供 recurrence_rule"
             
-            # 3. Convert remind_at to UTC time
+            # 3. Check reminders count limit
+            if not self._check_reminders_limit():
+                return f"無法新增提醒：達到最大提醒數量上限，最多只能存在 {Constants.REMINDERS_MAX} 個提醒"
+                
+            # 4. Convert remind_at to UTC time
             remind_at_utc = self._convert_to_utc_time(remind_at)
             if remind_at_utc.startswith("錯誤"):
                 return remind_at_utc
-            
-            # 4. Check reminders count limit
-            if not self._check_reminders_limit():
-                return f"無法新增提醒：達到最大提醒數量上限，最多只能存在 {Constants.REMINDERS_MAX} 個提醒"
             
             # 5. Process recurrence_exceptions
             recurrence_exceptions_array = self._process_recurrence_exceptions(recurrence_exceptions)
@@ -173,11 +190,7 @@ class UserReminderManager:
         Returns:
             bool: True if under limit, False otherwise
         """
-        reminders_response = supabase_admin.from_("reminders").select(
-            "id", count="exact"
-        ).eq("user_id", self.user_id).eq("status", "active").execute()
-        
-        current_reminders_count = reminders_response.count if reminders_response.count is not None else 0
+        current_reminders_count = self.get_reminder_count()
         
         if current_reminders_count >= Constants.REMINDERS_MAX:
             print(f"超過最大提醒數量上限：{Constants.REMINDERS_MAX}")

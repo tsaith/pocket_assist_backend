@@ -1,4 +1,3 @@
-from typing import List, Tuple
 from langchain_core.tools import StructuredTool
 
 from app.lib.supabase import supabase_admin
@@ -36,7 +35,7 @@ def create_search_memory_tool(user_id: str) -> StructuredTool:
     search_memory_tool = StructuredTool.from_function(
         func=search_memory,
         name="search_memory",
-        description="當無法回答主人的問題時，必須先搜索記憶庫（裡面有主人的所有筆記資料）。",
+        description="當無法回答主人的問題時，必須先搜索記憶庫（裡面有主人的所有記事資料）。",
     )
 
     return search_memory_tool

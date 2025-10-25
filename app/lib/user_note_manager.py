@@ -21,6 +21,23 @@ class UserNoteManager:
         """
         self.user_id = user_id
     
+    def get_note_count(self) -> int:
+        """
+        Get the count of user's notes
+        
+        Returns:
+            int: Number of notes for the user
+        """
+        print(f"取得筆記數量 from user_id：{self.user_id}")
+        try:
+            response = supabase_admin.from_("notes").select("*", count="exact").eq("user_id", self.user_id).execute()
+            count = response.count if response.count is not None else 0
+            print(f"筆記數量：{count}")
+            return count
+        except Exception as e:
+            print(f"取得筆記數量時發生錯誤：{str(e)}")
+            return 0
+    
     def create_note(self, title: str, content: str) -> str:
         """
         Create a new note with subscription limit check
@@ -34,12 +51,8 @@ class UserNoteManager:
         """
         print(f"添加筆記：Title {title}, Content {content}")
         try:
-
             # Get current notes count
-            notes_response = supabase_admin.from_("notes").select("id", count="exact").eq("user_id", self.user_id).execute()
-            current_notes_count = notes_response.count if notes_response.count is not None else 0
-            
-            print(f"當前筆記數量：{current_notes_count}")
+            current_notes_count = self.get_note_count()
             
             if current_notes_count >= Constants.NOTES_MAX:
                 print(f"超過最大筆記上限：{Constants.NOTES_MAX}")
