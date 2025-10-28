@@ -262,11 +262,11 @@ async def test_recharge_credits_invalid_amount():
     """Test recharging credits with invalid amount"""
     with pytest.raises(Exception) as exc:
         await CreditManager.recharge_credits("user-8", 0)
-    assert "充值金額必須大於 0" in str(exc.value)
+    assert "Recharge amount must be greater than 0" in str(exc.value)
 
     with pytest.raises(Exception) as exc:
         await CreditManager.recharge_credits("user-8", -5.0)
-    assert "充值金額必須大於 0" in str(exc.value)
+    assert "Recharge amount must be greater than 0" in str(exc.value)
 
 
 @pytest.mark.asyncio
@@ -400,7 +400,7 @@ async def test_get_user_by_email_not_found(mocker: MockFixture):
     with pytest.raises(Exception) as exc:
         await CreditManager.get_user_by_email("missing@example.com")
 
-    assert "找不到 email 為 missing@example.com 的用戶" in str(exc.value)
+    assert "Cannot find user with email missing@example.com" in str(exc.value)
 
 
 @pytest.mark.asyncio
@@ -420,7 +420,7 @@ async def test_get_user_by_email_error(mocker: MockFixture):
     with pytest.raises(Exception) as exc:
         await CreditManager.get_user_by_email("foo@example.com")
 
-    assert "查詢用戶時發生錯誤: boom" in str(exc.value)
+    assert "Error occurred while querying user: boom" in str(exc.value)
 
 
 @pytest.mark.asyncio

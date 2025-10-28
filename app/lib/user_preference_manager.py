@@ -24,24 +24,24 @@ class UserPreferenceManager:
         Returns:
             str: Language code (e.g., 'zh-TW', 'en-US') or error message
         """
-        print(f"獲取 user ID {self.user_id} 的設定語言")
+        print(f"Getting language preference for user ID {self.user_id}")
         
         try:
             # Query language from profiles table
             profile_response = supabase_admin.from_("profiles").select("language").eq("id", self.user_id).execute()
             
             if not profile_response.data:
-                error_msg = f"找不到 user ID {self.user_id} 的 profile 記錄"
+                error_msg = f"Profile record not found for user ID {self.user_id}"
                 print(error_msg)
                 return error_msg
             
             language = profile_response.data[0].get("language", "zh-TW")
-            print(f"目前設定語言：{language}")
+            print(f"Current language setting: {language}")
             
             return language
             
         except Exception as e:
-            error_msg = f"獲取設定語言時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while getting language preference: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -55,7 +55,7 @@ class UserPreferenceManager:
         Returns:
             str: Success or error message
         """
-        print(f"設定 user ID {self.user_id} 的語言為：{language}")
+        print(f"Setting language for user ID {self.user_id} to: {language}")
         
         try:
             # Validate language format (IETF BCP 47 standard)
@@ -63,7 +63,7 @@ class UserPreferenceManager:
             # Examples: zh-TW, en-US, ja-JP, fr, de
             language_pattern = r'^[a-z]{2,3}(-[A-Z]{2})?$'
             if not re.match(language_pattern, language):
-                return f"錯誤：語言格式 '{language}' 不符合 IETF BCP 47 標準。正確格式應為：zh-TW, en-US, ja-JP, fr, de 等"
+                return f"Error: Language format '{language}' does not conform to IETF BCP 47 standard. Correct format should be: zh-TW, en-US, ja-JP, fr, de, etc."
             
             # Update language in profiles table
             update_response = supabase_admin.from_("profiles").update({
@@ -71,14 +71,14 @@ class UserPreferenceManager:
             }).eq("id", self.user_id).execute()
             
             if update_response.data:
-                print(f"成功更新用戶 {self.user_id} 的語言為：{language}")
-                return f"成功設定語言為：{language}"
+                print(f"Successfully updated language for user {self.user_id} to: {language}")
+                return f"Successfully set language to: {language}"
             else:
-                error_msg = f"更新語言失敗，找不到用戶 {self.user_id}"
+                error_msg = f"Failed to update language, user {self.user_id} not found"
                 print(error_msg)
                 return error_msg
                 
         except Exception as e:
-            error_msg = f"設定語言時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while setting language: {str(e)}"
             print(error_msg)
             return error_msg

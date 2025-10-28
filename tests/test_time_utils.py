@@ -33,7 +33,7 @@ def test_get_weekday_returns_expected_name(fixed_datetime):
 def test_get_weekday_invalid_timezone_returns_error():
     """Test getting weekday with invalid timezone"""
     result = time_utils.get_weekday("Invalid/Zone")
-    assert "錯誤" in result
+    assert "Error" in result
 
 
 def test_get_date_returns_iso_today(fixed_datetime):
@@ -67,7 +67,7 @@ def test_get_user_timezone_missing_profile(mocker: MockFixture):
     mocker.patch('app.lib.utils.time_utils.supabase_admin', mock_admin)
     
     result = time_utils.get_user_timezone("user-456")
-    assert "找不到" in result
+    assert "Cannot find" in result
 
 
 def test_get_user_timezone_database_error(mocker: MockFixture):
@@ -79,7 +79,7 @@ def test_get_user_timezone_database_error(mocker: MockFixture):
     mocker.patch('app.lib.utils.time_utils.supabase_admin', mock_admin)
     
     result = time_utils.get_user_timezone("user-789")
-    assert "錯誤" in result
+    assert "Error" in result
 
 
 def test_get_relative_date_offset(fixed_datetime):
@@ -110,7 +110,7 @@ def test_get_user_relative_date_propagates_error(mocker: MockFixture):
     mocker.patch('app.lib.utils.time_utils.supabase_admin', mock_admin)
     
     result = time_utils.get_user_relative_date("user-123", days_offset=2)
-    assert "找不到" in result
+    assert "Cannot find" in result
 
 
 def test_get_weekday_date_next_week(fixed_datetime):
@@ -131,10 +131,10 @@ def test_get_weekday_date_last_week(fixed_datetime):
 def test_get_weekday_date_invalid_weekday():
     """Test getting weekday date with invalid weekday"""
     result = time_utils.get_weekday_date("Asia/Taipei", weekday=0)
-    assert "weekday 必須在 1-7 之間" in result
+    assert "weekday must be between 1-7" in result
     
     result = time_utils.get_weekday_date("Asia/Taipei", weekday=8)
-    assert "weekday 必須在 1-7 之間" in result
+    assert "weekday must be between 1-7" in result
 
 
 def test_get_user_weekday_date(mocker: MockFixture, fixed_datetime):

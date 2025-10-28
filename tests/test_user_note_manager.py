@@ -19,7 +19,7 @@ def test_create_note_success(mocker: MockFixture):
     manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440000")
     result = manager.create_note("Test Note", "Test content")
 
-    assert "成功添加筆記" in result
+    assert "Successfully created note" in result
     assert "note-123" in result
     
     # Verify insert was called
@@ -39,7 +39,7 @@ def test_create_note_exceeds_limit(mocker: MockFixture):
     manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440001")
     result = manager.create_note("Test Note", "Test content")
 
-    assert "達到最大筆記上限" in result
+    assert "Cannot create note: maximum notes limit" in result
     # Should not insert
     assert mock_admin.get_call_count("insert", "notes") == 0
 
@@ -56,7 +56,7 @@ def test_create_note_duplicate_title(mocker: MockFixture):
     manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440002")
     result = manager.create_note("Test Note", "New content")
 
-    assert "已存在相同的 Title: Test Note 記錄" in result
+    assert "Note with same title already exists: Test Note" in result
 
 
 def test_read_notes_success(mocker: MockFixture):
@@ -142,7 +142,7 @@ def test_read_single_note_not_found(mocker: MockFixture):
     manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440006")
     result = manager.read_note("non-existent-id")
 
-    assert "找不到 ID non-existent-id 的筆記記錄" in result
+    assert "Note with ID non-existent-id not found" in result
 
 
 def test_update_note_success(mocker: MockFixture):
@@ -191,7 +191,7 @@ def test_delete_note_success(mocker: MockFixture):
     manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440009")
     result = manager.delete_note("note-1")
 
-    assert "成功刪除筆記記錄" in result
+    assert "Successfully deleted note" in result
     assert mock_admin.get_call_count("delete", "notes") == 1
 
 
@@ -206,7 +206,7 @@ def test_delete_note_not_found(mocker: MockFixture):
     manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440010")
     result = manager.delete_note("non-existent-id")
 
-    assert "找不到 ID non-existent-id 的筆記記錄" in result
+    assert "Note with ID non-existent-id not found" in result
 
 
 def test_search_notes_success(mocker: MockFixture):
@@ -243,7 +243,7 @@ def test_search_notes_no_results(mocker: MockFixture):
     manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440012")
     result = manager.search_notes("nonexistent")
 
-    assert "沒有找到包含關鍵字 'nonexistent' 的筆記" in result
+    assert "No notes found containing keyword 'nonexistent'" in result
 
 
 def test_search_notes_by_time_success(mocker: MockFixture):
@@ -288,7 +288,7 @@ def test_search_notes_by_time_no_results(mocker: MockFixture):
     manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440014")
     result = manager.search_notes_by_time("2024-01-01 10:00:00", "2024-01-31 10:00:00")
 
-    assert "沒有找到在時間範圍 '2024-01-01 10:00:00' 到 '2024-01-31 10:00:00' 之間創建或更新的筆記" in result
+    assert "No notes found in time range '2024-01-01 10:00:00' to '2024-01-31 10:00:00'" in result
 
 
 def test_search_notes_by_time_conversion_error(mocker: MockFixture):
@@ -303,4 +303,4 @@ def test_search_notes_by_time_conversion_error(mocker: MockFixture):
     manager = UserNoteManager("550e8400-e29b-41d4-a716-446655440015")
     result = manager.search_notes_by_time("invalid-time", "2024-01-31 10:00:00")
 
-    assert "時間轉換失敗" in result
+    assert "Time conversion failed" in result

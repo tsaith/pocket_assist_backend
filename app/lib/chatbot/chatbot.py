@@ -10,63 +10,63 @@ from app.lib.credit_manager import CreditManager
 
 class Chatbot(ChatbotBase):
     """
-    聊天機器人類，繼承 Agent 並添加聊天機器人特有的功能
+    Chatbot class that inherits from Agent and adds chatbot-specific functionality
     """
 
     #def __init__(self, model: str = "gpt-4o"):
     def __init__(self, model: str = "gpt-4o-mini"):
         """
-        初始化聊天機器人
+        Initialize chatbot
         
         Args:
-            chatbot_id: 聊天機器人ID
-            model: 使用的模型名稱
+            chatbot_id: Chatbot ID
+            model: Model name to use
         """
-        # 初始化父類 Agent
+        # Initialize parent class Agent
         super().__init__(model)
 
         self.user_id = None
 
-        # 聊天機器人特有屬性
+        # Chatbot-specific attributes
         self.chatbot_id = None
         self.chatbot_data = None
 
-        # 緩存屬性
+        # Cache attributes
         self.chatbot_info: Optional[Dict[str, Any]] = None
         self.linebot_id: Optional[str] = None
-        self.linebot: Optional[Any] = None  # 避免循環導入，暫時用 Any
+        self.linebot: Optional[Any] = None  # Use Any temporarily to avoid circular import
         self.user_id: Optional[str] = None
 
     def init(self, chatbot_id: str):
         """
-        初始化聊天機器人，獲取相關數據並設置檢索器
+        Initialize chatbot, get related data and set up retriever
         
         Args:
-            chatbot_id: 聊天機器人ID
+            chatbot_id: Chatbot ID
             
         Returns:
-            self: 返回自身以支持鏈式調用
+            self: Returns self to support method chaining
         """
         self.chatbot_id = chatbot_id
-        # 清除緩存，因為 chatbot_id 可能已更改
+        # Clear cache since chatbot_id may have changed
         self.clear_cache()
 
-        # 從 Supabase 獲取 chatbot 資料
+        # Get chatbot data from Supabase
         response = supabase_admin.table('chatbots').select('*').eq('id', chatbot_id).single().execute()
 
         if not response or not response.data:
-            raise ValueError(f"找不到 ID 為 {chatbot_id} 的 chatbot")
+            raise ValueError(f"Cannot find chatbot with ID {chatbot_id}")
             
         self.chatbot_data = response.data
-        chatbot_name = self.chatbot_data.get('name', 'AI助手')
+        chatbot_name = self.chatbot_data.get('name', 'AI Assistant')
         character_traits = self.chatbot_data.get('character_traits', '')
         
-        # 從 chatbot 資料中獲取 user_id
+        # Get user_id from chatbot data
         self.user_id = self.chatbot_data.get('user_id')
         if not self.user_id:
-            raise ValueError(f"找不到 chatbot {chatbot_id} 對應的 user_id")
+            raise ValueError(f"Cannot find user_id for chatbot {chatbot_id}")
         
-        print(f"初始化 Chatbot: {chatbot_name}, User ID: {self.user_id}")
+        print(f"Initializing Chatbot: {chatbot_name}, User ID: {self.user_id}")
         
         self.setup_agent(self.user_id, chatbot_name, character_traits)
         
@@ -74,37 +74,37 @@ class Chatbot(ChatbotBase):
 
     async def invoke(self, user_message: str, thread_id: str = "default", platform: str = "app") -> Dict[str, Any]:
         """
-        處理使用者訊息並儲存對話記錄
+        Process user message and save conversation history
         
         Args:
-            user_message: 使用者訊息
-            thread_id: 對話線程ID
-            platform: 平台類型 (app, line, unknown)
+            user_message: User message
+            thread_id: Conversation thread ID
+            platform: Platform type (app, line, unknown)
             
         Returns:
-            Dict: 包含回應結果和相關資訊
+            Dict: Contains response result and related information
         """
         
         try:
-            # 獲取 chatbot 對應的 user_id
+            # Get user_id corresponding to chatbot
             user_id = self.get_user_id()
             if not user_id:
-                raise ValueError('找不到對應的 chatbot 或 user_id')
+                raise ValueError('Cannot find corresponding chatbot or user_id')
 
-            # 查詢 credit balance
+            # Query credit balance
             credit_balance = await CreditManager.get_credit_balance(user_id)
 
             print(f"user_id: {user_id}, chatbot_id: {self.chatbot_id}, thread_id: {thread_id}, platform: {platform}")
 
-            # 判斷餘額
+            # Check balance
             if credit_balance.balance <= 0:
-                error_message = '抱歉，由於 Credits 不足，無法繼續提供對話服務。'
-                user_message = f'請回復 {error_message}'
+                error_message = 'Sorry, unable to continue providing conversation service due to insufficient Credits.'
+                user_message = f'Please reply {error_message}'
 
-            # 呼叫父類 Agent 的 invoke 方法
+            # Call parent class Agent's invoke method
             response = super().invoke(user_message, thread_id)
 
-            # 如果回應成功，儲存機器人回應並消耗 credits
+            # If response is successful, save bot response and consume credits
             if 'result' in response:
 
                 # Consume credits from tokens
@@ -116,7 +116,7 @@ class Chatbot(ChatbotBase):
                 except Exception as error:
                     print(f'Failed to consume credits: {error}')
                 
-                # 儲存 token 使用量
+                # Save token usage
                 input_tokens = token_usage.get('input_tokens', 0)
                 output_tokens = token_usage.get('output_tokens', 0)
                 total_tokens = token_usage.get('total_tokens', input_tokens + output_tokens)
@@ -143,16 +143,16 @@ class Chatbot(ChatbotBase):
         
     def get_chatbot_info(self) -> Optional[Dict[str, Any]]:
         """
-        從 Supabase 獲取聊天機器人基本信息
+        Get chatbot basic information from Supabase
         
         Returns:
-            Dict 包含 id, name, description, user_id，如果找不到則返回 None
+            Dict containing id, name, description, user_id, returns None if not found
         """
         if self.chatbot_info:
             return self.chatbot_info
 
         if not self.chatbot_id:
-            print("錯誤：chatbot_id 未設置")
+            print("Error: chatbot_id not set")
             return None
 
         try:
@@ -161,10 +161,10 @@ class Chatbot(ChatbotBase):
             ).eq('id', self.chatbot_id).single().execute()
 
             if not response.data:
-                print(f"找不到 chatbot_id: {self.chatbot_id}")
+                print(f"Cannot find chatbot_id: {self.chatbot_id}")
                 return None
 
-            # 將 character_traits 映射為 description
+            # Map character_traits to description
             data = response.data
             self.chatbot_info = {
                 'id': data['id'],
@@ -175,36 +175,36 @@ class Chatbot(ChatbotBase):
             return self.chatbot_info
 
         except Exception as e:
-            print(f"獲取聊天機器人信息時發生錯誤: {str(e)}")
+            print(f"Error occurred while getting chatbot information: {str(e)}")
             return None
 
     def get_linebot(self):
         """
-        獲取此聊天機器人的 Linebot 實例
+        Get Linebot instance for this chatbot
         
         Returns:
-            Linebot: Linebot 實例
+            Linebot: Linebot instance
             
         Raises:
-            ValueError: 當找不到關聯的 linebot_id 時
+            ValueError: When associated linebot_id cannot be found
         """
         if self.linebot:
             return self.linebot
             
         linebot_id = self._get_linebot_id()
         if not linebot_id:
-            raise ValueError(f'找不到 chatbot_id {self.chatbot_id} 對應的 linebot_id')
+            raise ValueError(f'Cannot find linebot_id for chatbot_id {self.chatbot_id}')
         
-        # 延遲導入避免循環依賴
+        # Delayed import to avoid circular dependency
         self.linebot = Linebot(linebot_id)
         return self.linebot
 
     def _get_linebot_id(self) -> Optional[str]:
         """
-        根據 chatbot_id 從 Supabase 獲取 linebot_id
+        Get linebot_id from Supabase based on chatbot_id
         
         Returns:
-            str: linebot_id，如果找不到則返回 None
+            str: linebot_id, returns None if not found
         """
         if self.linebot_id:
             return self.linebot_id
@@ -218,60 +218,60 @@ class Chatbot(ChatbotBase):
             ).eq('chatbot_id', self.chatbot_id).single().execute()
 
             if not response.data:
-                print(f"找不到 chatbot_id {self.chatbot_id} 對應的 linebot")
+                print(f"Cannot find linebot for chatbot_id {self.chatbot_id}")
                 return None
 
             self.linebot_id = response.data['id']
             return self.linebot_id
 
         except Exception as e:
-            print(f"獲取 linebot_id 時發生錯誤: {str(e)}")
+            print(f"Error occurred while getting linebot_id: {str(e)}")
             return None
 
     def has_linebot(self) -> bool:
         """
-        檢查此聊天機器人是否有關聯的 linebot
+        Check if this chatbot has an associated linebot
         
         Returns:
-            bool: 是否有關聯的 linebot
+            bool: Whether there is an associated linebot
         """
         linebot_id = self._get_linebot_id()
         return linebot_id is not None
 
     def get_associated_linebot_id(self) -> Optional[str]:
         """
-        獲取關聯的 linebot_id
+        Get associated linebot_id
         
         Returns:
-            str: linebot_id，如果找不到則返回 None
+            str: linebot_id, returns None if not found
         """
         return self._get_linebot_id()
 
     def is_valid(self) -> bool:
         """
-        檢查聊天機器人是否存在且有效
+        Check if chatbot exists and is valid
         
         Returns:
-            bool: 聊天機器人是否有效
+            bool: Whether chatbot is valid
         """
         info = self.get_chatbot_info()
         return info is not None
 
     def get_id(self) -> Optional[str]:
         """
-        獲取聊天機器人 ID
+        Get chatbot ID
         
         Returns:
-            str: 聊天機器人 ID
+            str: Chatbot ID
         """
         return self.chatbot_id
 
     def get_user_id(self) -> Optional[str]:
         """
-        獲取擁有此聊天機器人的用戶 ID
+        Get user ID who owns this chatbot
         
         Returns:
-            str: 用戶 ID，如果找不到則返回 None
+            str: User ID, returns None if not found
         """
         if self.user_id:
             return self.user_id
@@ -284,12 +284,12 @@ class Chatbot(ChatbotBase):
             
             return None
         except Exception as e:
-            print(f"獲取 user_id 時發生錯誤: {str(e)}")
+            print(f"Error occurred while getting user_id: {str(e)}")
             return None
 
     def clear_cache(self) -> None:
         """
-        清除緩存數據（用於測試或當數據可能已更改時）
+        Clear cached data (for testing or when data may have changed)
         """
         self.linebot_id = None
         self.linebot = None

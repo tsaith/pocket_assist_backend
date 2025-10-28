@@ -30,17 +30,17 @@ class UserBookkeepingManager:
         Returns:
             str: Success or error message
         """
-        print(f"添加記帳類別：Name {name}, Type {type}")
+        print(f"Creating bookkeeping category: Name {name}, Type {type}")
         try:
             # Validate type
             if type not in ['income', 'expense']:
-                return f"類型必須是 'income' 或 'expense'，當前類型：{type}"
+                return f"Type must be 'income' or 'expense', current type: {type}"
             
             # Check if category already exists
             response = supabase_admin.from_("bookkeeping_categories").select("*").eq("user_id", self.user_id).eq("name", name).eq("type", type).execute()
             
             if response.data:
-                return f"已存在相同的記帳類別：{name} ({type})"
+                return f"Bookkeeping category already exists: {name} ({type})"
             
             # Insert new record
             result = supabase_admin.from_("bookkeeping_categories").insert({
@@ -51,12 +51,12 @@ class UserBookkeepingManager:
             
             if result.data:
                 new_record = result.data[0]
-                return f"成功添加記帳類別，ID: {new_record.get('id', '')}, Name: {name}, Type: {type}"
+                return f"Successfully created bookkeeping category, ID: {new_record.get('id', '')}, Name: {name}, Type: {type}"
             else:
-                return "添加記帳類別失敗"
+                return "Failed to create bookkeeping category"
                 
         except Exception as e:
-            error_msg = f"添加記帳類別時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while creating bookkeeping category: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -67,7 +67,7 @@ class UserBookkeepingManager:
         Returns:
             str: Formatted categories list or error message
         """
-        print(f"讀取記帳類別 from user_id：{self.user_id}")
+        print(f"Reading bookkeeping categories for user: {self.user_id}")
         try:
             response = supabase_admin.from_("bookkeeping_categories").select("id, name, type").eq("user_id", self.user_id).execute()
             if response.data:
@@ -77,12 +77,12 @@ class UserBookkeepingManager:
                     categories_list.append(category_info)
                 content = "\n".join(categories_list)
                 
-                print(f"記帳類別內容：{content}")
+                print(f"Bookkeeping categories content: {content}")
                 return content
             else:
                 return "No bookkeeping categories found"
         except Exception as e:
-            print(f"讀取記帳類別時發生錯誤：{str(e)}")
+            print(f"Error occurred while reading bookkeeping categories: {str(e)}")
             return ""
     
     def read_bookkeeping_category(self, id: str) -> str:
@@ -95,7 +95,7 @@ class UserBookkeepingManager:
         Returns:
             str: Category information or error message
         """
-        print(f"讀取記帳類別 from user_id：{self.user_id}, category_id：{id}")
+        print(f"Reading bookkeeping category for user: {self.user_id}, category_id: {id}")
         try:
             response = supabase_admin.from_("bookkeeping_categories").select("id, name, type").eq("id", id).eq("user_id", self.user_id).execute()
             
@@ -103,12 +103,12 @@ class UserBookkeepingManager:
                 category_data = response.data[0]
                 category_info = f"ID: {category_data.get('id', '')}, Name: {category_data.get('name', '')}, Type: {category_data.get('type', '')}"
                 
-                print(f"記帳類別內容：{category_info}")
+                print(f"Bookkeeping category content: {category_info}")
                 return category_info
             else:
-                return f"找不到 ID {id} 的記帳類別"
+                return f"Bookkeeping category with ID {id} not found"
         except Exception as e:
-            print(f"讀取記帳類別時發生錯誤：{str(e)}")
+            print(f"Error occurred while reading bookkeeping category: {str(e)}")
             return ""
     
     def update_bookkeeping_category(self, id: str, name: str, type: str) -> bool:
@@ -123,11 +123,11 @@ class UserBookkeepingManager:
         Returns:
             bool: True if updated successfully, False otherwise
         """
-        print(f"更新記帳類別：ID {id}, Name {name}, Type {type}")
+        print(f"Updating bookkeeping category: ID {id}, Name {name}, Type {type}")
         try:
             # Validate type
             if type not in ['income', 'expense']:
-                print(f"類型必須是 'income' 或 'expense'，當前類型：{type}")
+                print(f"Type must be 'income' or 'expense', current type: {type}")
                 return False
             
             # Check if record exists
@@ -141,11 +141,11 @@ class UserBookkeepingManager:
                 }).eq("id", id).eq("user_id", self.user_id).execute()
                 return True
             else:
-                print(f"找不到 ID {id} 的記帳類別")
+                print(f"Bookkeeping category with ID {id} not found")
                 return False
                 
         except Exception as e:
-            print(f"更新記帳類別時發生錯誤：{str(e)}")
+            print(f"Error occurred while updating bookkeeping category: {str(e)}")
             return False
     
     def delete_bookkeeping_category(self, id: str) -> str:
@@ -158,24 +158,24 @@ class UserBookkeepingManager:
         Returns:
             str: Success or error message
         """
-        print(f"刪除記帳類別：ID {id}")
+        print(f"Deleting bookkeeping category: ID {id}")
         try:
             # Check if record exists
             response = supabase_admin.from_("bookkeeping_categories").select("*").eq("id", id).eq("user_id", self.user_id).execute()
             
             if not response.data:
-                return f"找不到 ID {id} 的記帳類別"
+                return f"Bookkeeping category with ID {id} not found"
             
             # Delete record
             result = supabase_admin.from_("bookkeeping_categories").delete().eq("id", id).eq("user_id", self.user_id).execute()
             
             if result.data:
-                return f"成功刪除記帳類別，ID: {id}"
+                return f"Successfully deleted bookkeeping category, ID: {id}"
             else:
-                return "刪除記帳類別失敗"
+                return "Failed to delete bookkeeping category"
                 
         except Exception as e:
-            error_msg = f"刪除記帳類別時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while deleting bookkeeping category: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -196,13 +196,13 @@ class UserBookkeepingManager:
         Returns:
             str: Success or error message
         """
-        print(f"添加記帳交易：Category ID {category_id}, Amount {amount}, Description {description}, Date {date}, Payment Method {payment_method}")
+        print(f"Creating bookkeeping transaction: Category ID {category_id}, Amount {amount}, Description {description}, Date {date}, Payment Method {payment_method}")
         try:
             # Check if category exists
             category_response = supabase_admin.from_("bookkeeping_categories").select("*").eq("id", category_id).eq("user_id", self.user_id).execute()
             
             if not category_response.data:
-                return f"找不到 ID {category_id} 的記帳類別"
+                return f"Bookkeeping category with ID {category_id} not found"
             
             # Prepare transaction data
             transaction_data = {
@@ -225,12 +225,12 @@ class UserBookkeepingManager:
             if result.data:
                 new_record = result.data[0]
                 payment_info = f", Payment Method: {payment_method}" if payment_method else ""
-                return f"成功添加記帳交易，ID: {new_record.get('id', '')}, Amount: {amount}, Description: {description}{payment_info}"
+                return f"Successfully created bookkeeping transaction, ID: {new_record.get('id', '')}, Amount: {amount}, Description: {description}{payment_info}"
             else:
-                return "添加記帳交易失敗"
+                return "Failed to create bookkeeping transaction"
                 
         except Exception as e:
-            error_msg = f"添加記帳交易時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while creating bookkeeping transaction: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -241,7 +241,7 @@ class UserBookkeepingManager:
         Returns:
             str: Formatted transactions list with category info or error message
         """
-        print(f"讀取記帳交易 from user_id：{self.user_id}")
+        print(f"Reading bookkeeping transactions from user_id: {self.user_id}")
         try:
             # Query transactions with category info using foreign key relationship
             response = supabase_admin.from_("bookkeeping_transactions").select(
@@ -258,18 +258,18 @@ class UserBookkeepingManager:
                     category_info = transaction_data.get('bookkeeping_categories', {})
                     category_name = category_info.get('name', 'Unknown') if category_info else 'Unknown'
                     category_type = category_info.get('type', 'unknown') if category_info else 'unknown'
-                    type_display = "收入" if category_type == 'income' else "支出" if category_type == 'expense' else category_type
+                    type_display = "Income" if category_type == 'income' else "Expense" if category_type == 'expense' else category_type
                     
                     transaction_info = f"ID: {transaction_data.get('id', '')}, Category: {category_name} ({type_display}), Amount: {transaction_data.get('amount', '')}, Description: {transaction_data.get('description', '')}{payment_info}, Date: {transaction_data.get('date', '')}, Created: {transaction_data.get('created_at', '')}, Updated: {transaction_data.get('updated_at', '')}"
                     transactions_list.append(transaction_info)
                 content = "\n".join(transactions_list)
                 
-                print(f"記帳交易內容：{content}")
+                print(f"Bookkeeping transaction content: {content}")
                 return content
             else:
                 return "No bookkeeping transactions found"
         except Exception as e:
-            print(f"讀取記帳交易時發生錯誤：{str(e)}")
+            print(f"Error occurred while reading bookkeeping transactions: {str(e)}")
             return ""
     
     def read_bookkeeping_transaction(self, id: str) -> str:
@@ -282,7 +282,7 @@ class UserBookkeepingManager:
         Returns:
             str: Transaction information with category info or error message
         """
-        print(f"讀取記帳交易 from user_id：{self.user_id}, transaction_id：{id}")
+        print(f"Reading bookkeeping transactions from user_id: {self.user_id}, transaction_id: {id}")
         try:
             # Query transaction with category info
             response = supabase_admin.from_("bookkeeping_transactions").select(
@@ -298,16 +298,16 @@ class UserBookkeepingManager:
                 category_info = transaction_data.get('bookkeeping_categories', {})
                 category_name = category_info.get('name', 'Unknown') if category_info else 'Unknown'
                 category_type = category_info.get('type', 'unknown') if category_info else 'unknown'
-                type_display = "收入" if category_type == 'income' else "支出" if category_type == 'expense' else category_type
+                type_display = "Income" if category_type == 'income' else "Expense" if category_type == 'expense' else category_type
                 
                 transaction_info = f"ID: {transaction_data.get('id', '')}, Category: {category_name} ({type_display}), Amount: {transaction_data.get('amount', '')}, Description: {transaction_data.get('description', '')}{payment_info}, Date: {transaction_data.get('date', '')}, Created: {transaction_data.get('created_at', '')}, Updated: {transaction_data.get('updated_at', '')}"
                 
-                print(f"記帳交易內容：{transaction_info}")
+                print(f"Bookkeeping transaction content: {transaction_info}")
                 return transaction_info
             else:
-                return f"找不到 ID {id} 的記帳交易"
+                return f"Bookkeeping transaction with ID {id} not found"
         except Exception as e:
-            print(f"讀取記帳交易時發生錯誤：{str(e)}")
+            print(f"Error occurred while reading bookkeeping transactions: {str(e)}")
             return ""
     
     def update_bookkeeping_transaction(self, id: str, category_id: str, amount: float, 
@@ -327,7 +327,7 @@ class UserBookkeepingManager:
         Returns:
             bool: True if updated successfully, False otherwise
         """
-        print(f"更新記帳交易：ID {id}, Category ID {category_id}, Amount {amount}, Description {description}, Date {date}, Payment Method {payment_method}")
+        print(f"Updating bookkeeping transaction: ID {id}, Category ID {category_id}, Amount {amount}, Description {description}, Date {date}, Payment Method {payment_method}")
         try:
             # Check if record exists
             response = supabase_admin.from_("bookkeeping_transactions").select("*").eq("id", id).eq("user_id", self.user_id).execute()
@@ -351,11 +351,11 @@ class UserBookkeepingManager:
                 supabase_admin.from_("bookkeeping_transactions").update(update_data).eq("id", id).eq("user_id", self.user_id).execute()
                 return True
             else:
-                print(f"找不到 ID {id} 的記帳交易")
+                print(f"Bookkeeping transaction with ID {id} not found")
                 return False
                 
         except Exception as e:
-            print(f"更新記帳交易時發生錯誤：{str(e)}")
+            print(f"Error occurred while updating bookkeeping transaction: {str(e)}")
             return False
     
     def delete_bookkeeping_transaction(self, id: str) -> str:
@@ -368,24 +368,24 @@ class UserBookkeepingManager:
         Returns:
             str: Success or error message
         """
-        print(f"刪除記帳交易：ID {id}")
+        print(f"Deleting bookkeeping transaction: ID {id}")
         try:
             # Check if record exists
             response = supabase_admin.from_("bookkeeping_transactions").select("*").eq("id", id).eq("user_id", self.user_id).execute()
             
             if not response.data:
-                return f"找不到 ID {id} 的記帳交易"
+                return f"Bookkeeping transaction with ID {id} not found"
             
             # Delete record
             result = supabase_admin.from_("bookkeeping_transactions").delete().eq("id", id).eq("user_id", self.user_id).execute()
             
             if result.data:
-                return f"成功刪除記帳交易，ID: {id}"
+                return f"Successfully deleted bookkeeping transaction, ID: {id}"
             else:
-                return "刪除記帳交易失敗"
+                return "Failed to delete bookkeeping transaction"
                 
         except Exception as e:
-            error_msg = f"刪除記帳交易時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while deleting bookkeeping transaction: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -401,7 +401,7 @@ class UserBookkeepingManager:
         Returns:
             str: Formatted transactions list with category info or error message
         """
-        print(f"搜尋記帳交易 from user_id：{self.user_id}, keyword：{keyword}")
+        print(f"Searching bookkeeping transactions from user_id: {self.user_id}, keyword: {keyword}")
         try:
             # Search in description and payment_method fields with category info
             response = supabase_admin.from_("bookkeeping_transactions").select(
@@ -418,19 +418,19 @@ class UserBookkeepingManager:
                     category_info = transaction_data.get('bookkeeping_categories', {})
                     category_name = category_info.get('name', 'Unknown') if category_info else 'Unknown'
                     category_type = category_info.get('type', 'unknown') if category_info else 'unknown'
-                    type_display = "收入" if category_type == 'income' else "支出" if category_type == 'expense' else category_type
+                    type_display = "Income" if category_type == 'income' else "Expense" if category_type == 'expense' else category_type
                     
                     transaction_info = f"ID: {transaction_data.get('id', '')}, Category: {category_name} ({type_display}), Amount: {transaction_data.get('amount', '')}, Description: {transaction_data.get('description', '')}{payment_info}, Date: {transaction_data.get('date', '')}, Created: {transaction_data.get('created_at', '')}, Updated: {transaction_data.get('updated_at', '')}"
                     transactions_list.append(transaction_info)
                 content = "\n".join(transactions_list)
                 
-                print(f"搜尋結果：找到 {len(response.data)} 個記帳交易")
+                print(f"Search results: found {len(response.data)} bookkeeping transactions")
                 return content
             else:
-                return f"沒有找到包含關鍵字 '{keyword}' 的記帳交易"
+                return f"No bookkeeping transactions found containing keyword '{keyword}'"
         except Exception as e:
-            print(f"搜尋記帳交易時發生錯誤：{str(e)}")
-            return f"搜尋記帳交易時發生錯誤：{str(e)}"
+            print(f"Error occurred while searching bookkeeping transactions: {str(e)}")
+            return f"Error occurred while searching bookkeeping transactions: {str(e)}"
     
     def search_bookkeeping_transactions_by_date(self, start_date: str, end_date: str) -> str:
         """
@@ -443,7 +443,7 @@ class UserBookkeepingManager:
         Returns:
             str: Formatted transactions list with category info or error message
         """
-        print(f"根據日期範圍搜尋記帳交易 from user_id：{self.user_id}, start_date：{start_date}, end_date：{end_date}")
+        print(f"Searching bookkeeping transactions by date range from user_id: {self.user_id}, start_date: {start_date}, end_date: {end_date}")
         try:
             # Search by date range with category info
             response = supabase_admin.from_("bookkeeping_transactions").select(
@@ -460,17 +460,17 @@ class UserBookkeepingManager:
                     category_info = transaction_data.get('bookkeeping_categories', {})
                     category_name = category_info.get('name', 'Unknown') if category_info else 'Unknown'
                     category_type = category_info.get('type', 'unknown') if category_info else 'unknown'
-                    type_display = "收入" if category_type == 'income' else "支出" if category_type == 'expense' else category_type
+                    type_display = "Income" if category_type == 'income' else "Expense" if category_type == 'expense' else category_type
                     
                     transaction_info = f"ID: {transaction_data.get('id', '')}, Category: {category_name} ({type_display}), Amount: {transaction_data.get('amount', '')}, Description: {transaction_data.get('description', '')}{payment_info}, Date: {transaction_data.get('date', '')}, Created: {transaction_data.get('created_at', '')}, Updated: {transaction_data.get('updated_at', '')}"
                     transactions_list.append(transaction_info)
                 content = "\n".join(transactions_list)
                 
-                print(f"日期範圍搜尋結果：找到 {len(response.data)} 個記帳交易")
-                print(f"搜尋結果：{content}")
+                print(f"Date range search results: found {len(response.data)} bookkeeping transactions")
+                print(f"Search results: {content}")
                 return content
             else:
-                return f"沒有找到在日期範圍 '{start_date}' 到 '{end_date}' 之間的記帳交易"
+                return f"No bookkeeping transactions found in date range '{start_date}' to '{end_date}'"
         except Exception as e:
-            print(f"根據日期範圍搜尋記帳交易時發生錯誤：{str(e)}")
-            return f"根據日期範圍搜尋記帳交易時發生錯誤：{str(e)}"
+            print(f"Error occurred while searching bookkeeping transactions by date range: {str(e)}")
+            return f"Error occurred while searching bookkeeping transactions by date range: {str(e)}"

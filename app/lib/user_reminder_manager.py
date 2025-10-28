@@ -26,14 +26,14 @@ class UserReminderManager:
         Returns:
             int: Number of active reminders for the user
         """
-        print(f"取得提醒數量 from user_id：{self.user_id}")
+        print(f"Getting reminder count for user_id: {self.user_id}")
         try:
             response = supabase_admin.from_("reminders").select("*", count="exact").eq("user_id", self.user_id).eq("status", "active").execute()
             count = response.count if response.count is not None else 0
-            print(f"提醒數量：{count}")
+            print(f"Reminder count: {count}")
             return count
         except Exception as e:
-            print(f"取得提醒數量時發生錯誤：{str(e)}")
+            print(f"Error occurred while getting reminder count: {str(e)}")
             return 0
     
     def get_reminder_method(self) -> str:
@@ -43,20 +43,20 @@ class UserReminderManager:
         Returns:
             str: Reminder method or error message
         """
-        print(f"獲取 user ID {self.user_id} 的提醒方法")
+        print(f"Getting reminder method for user ID {self.user_id}")
         try:
             response = supabase_admin.from_("profiles").select("reminder_method").eq("id", self.user_id).execute()
             
             if not response.data:
-                error_msg = f"找不到 user ID {self.user_id} 的 profile 記錄"
+                error_msg = f"Profile record not found for user ID {self.user_id}"
                 print(error_msg)
                 return error_msg
             
             reminder_method = response.data[0].get("reminder_method", "app")
-            print(f"目前的提醒方法：{reminder_method}")
+            print(f"Current reminder method: {reminder_method}")
             return reminder_method
         except Exception as e:
-            error_msg = f"獲取提醒方法時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while getting reminder method: {str(e)}"
             print(error_msg)
             return error_msg
 
@@ -70,27 +70,27 @@ class UserReminderManager:
         Returns:
             str: Success message or error message
         """
-        print(f"設定 user ID {self.user_id} 的提醒方法為：{reminder_method}")
+        print(f"Setting reminder method for user ID {self.user_id} to: {reminder_method}")
         try:
             allowed_methods = ["notification", "alarm"]
             normalized_method = reminder_method.lower()
             
             if normalized_method not in allowed_methods:
-                return f"錯誤：提醒方法 '{reminder_method}' 不被支援。允許的值有：{', '.join(allowed_methods)}"
+                return f"Error: reminder method '{reminder_method}' is not supported. Allowed values are: {', '.join(allowed_methods)}"
             
             response = supabase_admin.from_("profiles").update({
                 "reminder_method": normalized_method
             }).eq("id", self.user_id).execute()
             
             if response.data:
-                print(f"成功設定用戶 {self.user_id} 的提醒方法為：{normalized_method}")
-                return f"成功設定提醒方法為：{normalized_method}"
+                print(f"Successfully set reminder method for user {self.user_id} to: {normalized_method}")
+                return f"Successfully set reminder method to: {normalized_method}"
             else:
-                error_msg = f"更新提醒方法失敗，找不到用戶 {self.user_id}"
+                error_msg = f"Failed to update reminder method, user {self.user_id} not found"
                 print(error_msg)
                 return error_msg
         except Exception as e:
-            error_msg = f"設定提醒方法時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while setting reminder method: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -112,35 +112,35 @@ class UserReminderManager:
             str: Success or error message
         """
         method = method.lower()
-        print(f"添加提醒： Remind At {remind_at}, Method {method}, Description {description}")
+        print(f"Creating reminder: Remind At {remind_at}, Method {method}, Description {description}")
         
         try:
             # 1. Validate method first
             valid_methods = ['notification', 'alarm']
             if method not in valid_methods:
-                return f"錯誤：method 必須是 {', '.join(valid_methods)} 其中之一"
+                return f"Error: method must be one of {', '.join(valid_methods)}"
             
             # 2. Validate recurrence_rule if recurring
             if is_recurring and not recurrence_rule:
-                return f"錯誤：設定為重複提醒時必須提供 recurrence_rule"
+                return f"Error: recurrence_rule is required when is_recurring is true"
             
             # 3. Check reminders count limit
             if not self._check_reminders_limit():
-                return f"無法新增提醒：達到最大提醒數量上限，最多只能存在 {Constants.REMINDERS_MAX} 個提醒"
+                return f"Cannot create reminder: maximum reminders limit reached ({Constants.REMINDERS_MAX} reminders)"
                 
             # 4. Convert remind_at to UTC time
             remind_at_utc = self._convert_to_utc_time(remind_at)
-            if remind_at_utc.startswith("錯誤"):
+            if remind_at_utc.startswith("Error"):
                 return remind_at_utc
             
             # 5. Process recurrence_exceptions
             recurrence_exceptions_array = self._process_recurrence_exceptions(recurrence_exceptions)
-            if isinstance(recurrence_exceptions_array, str) and recurrence_exceptions_array.startswith("錯誤"):
+            if isinstance(recurrence_exceptions_array, str) and recurrence_exceptions_array.startswith("Error"):
                 return recurrence_exceptions_array
             
             # 6. Check for duplicate reminders (only for non-recurring)
             if not is_recurring and self._is_duplicate_reminder(remind_at_utc, method):
-                return f"已存在相同的提醒記錄"
+                return f"Reminder with same time and method already exists"
             
             # 7. Prepare and insert reminder data
             insert_data = self._prepare_reminder_data(
@@ -153,14 +153,14 @@ class UserReminderManager:
             
             if result.data:
                 new_record = result.data[0]
-                method_display = "鬧鐘" if method == "alarm" else "通知"
-                recurring_info = f", 重複提醒: {'是' if is_recurring else '否'}"
-                return f"成功添加提醒，方式: {method_display}, ID: {new_record.get('id', '')}, Remind At (UTC): {remind_at_utc}{recurring_info}"
+                method_display = "alarm" if method == "alarm" else "notification"
+                recurring_info = f", Recurring: {'Yes' if is_recurring else 'No'}"
+                return f"Successfully created reminder, Method: {method_display}, ID: {new_record.get('id', '')}, Remind At (UTC): {remind_at_utc}{recurring_info}"
             else:
-                return "添加提醒失敗"
+                return "Failed to create reminder"
                 
         except Exception as e:
-            error_msg = f"添加提醒時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while creating reminder: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -179,7 +179,7 @@ class UserReminderManager:
             # This handles both local time and ISO format with timezone
             return self.time_manager.convert_local_to_utc_time(remind_at)
         except Exception as e:
-            error_msg = f"錯誤：時間格式不正確，請使用本地時間格式 YYYY-MM-DD HH:MM:SS 或包含時區的格式 YYYY-MM-DDTHH:MM:SS+HH:MM。錯誤詳情：{str(e)}"
+            error_msg = f"Error: Invalid time format. Please use local time format YYYY-MM-DD HH:MM:SS or ISO format with timezone YYYY-MM-DDTHH:MM:SS+HH:MM. Error details: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -193,7 +193,7 @@ class UserReminderManager:
         current_reminders_count = self.get_reminder_count()
         
         if current_reminders_count >= Constants.REMINDERS_MAX:
-            print(f"超過最大提醒數量上限：{Constants.REMINDERS_MAX}")
+            print(f"Maximum reminders limit exceeded: {Constants.REMINDERS_MAX}")
             return False
         
         return True
@@ -215,8 +215,8 @@ class UserReminderManager:
             exceptions_list = [exc.strip() for exc in recurrence_exceptions.split(',')]
             return exceptions_list
         except Exception as e:
-            print(f"處理 recurrence_exceptions 時發生錯誤：{str(e)}")
-            return "錯誤：recurrence_exceptions 格式不正確"
+            print(f"Error occurred while processing recurrence_exceptions: {str(e)}")
+            return "Error: Invalid recurrence_exceptions format"
     
     def _is_duplicate_reminder(self, remind_at_utc: str, method: str) -> bool:
         """
@@ -275,7 +275,7 @@ class UserReminderManager:
         Returns:
             str: Formatted reminders list or error message
         """
-        print(f"讀取全部提醒內容：{self.user_id}")
+        print(f"Reading all reminders for user: {self.user_id}")
         try:
             response = supabase_admin.from_("reminders").select("id, description, remind_at, method, is_sent, sent_at, created_at").eq("user_id", self.user_id).execute()
             if response.data:
@@ -285,12 +285,12 @@ class UserReminderManager:
                     reminders_list.append(reminder_info)
                 content = "\n".join(reminders_list)
                 
-                print(f"提醒內容：{content}")
+                print(f"Reminder content: {content}")
                 return content
             else:
                 return "No reminders found"
         except Exception as e:
-            print(f"讀取提醒內容時發生錯誤：{str(e)}")
+            print(f"Error occurred while reading reminders: {str(e)}")
             return ""
     
     def read_reminder(self, id: str) -> str:
@@ -303,7 +303,7 @@ class UserReminderManager:
         Returns:
             str: Reminder information or error message
         """
-        print(f"讀取單一提醒內容：ID {id}")
+        print(f"Reading single reminder: ID {id}")
         try:
             response = supabase_admin.from_("reminders").select("id, description, remind_at, method, is_sent, sent_at, created_at").eq("id", id).eq("user_id", self.user_id).execute()
             
@@ -311,12 +311,12 @@ class UserReminderManager:
                 reminder_data = response.data[0]
                 reminder_info = f"ID: {reminder_data.get('id', '')}, Description: {reminder_data.get('description', '')}, Remind At: {reminder_data.get('remind_at', '')}, Method: {reminder_data.get('method', '')}, Is Sent: {reminder_data.get('is_sent', '')}, Sent At: {reminder_data.get('sent_at', '')}, Created: {reminder_data.get('created_at', '')}"
                 
-                print(f"提醒內容：{reminder_info}")
+                print(f"Reminder content: {reminder_info}")
                 return reminder_info
             else:
-                return f"找不到 ID {id} 的提醒記錄"
+                return f"Reminder record with ID {id} not found"
         except Exception as e:
-            print(f"讀取單一提醒內容時發生錯誤：{str(e)}")
+            print(f"Error occurred while reading single reminder: {str(e)}")
             return ""
     
     def update_reminder(self, id: str, remind_at: str, description: str, method: str = 'notification') -> bool:
@@ -332,7 +332,7 @@ class UserReminderManager:
         Returns:
             bool: True if updated successfully, False otherwise
         """
-        print(f"更新提醒內容：ID {id}, Remind At {remind_at}, Method {method}, Description {description}")
+        print(f"Updating reminder: ID {id}, Remind At {remind_at}, Method {method}, Description {description}")
         try:
             # Check if record exists
             response = supabase_admin.from_("reminders").select("*").eq("id", id).eq("user_id", self.user_id).execute()
@@ -346,11 +346,11 @@ class UserReminderManager:
                 }).eq("id", id).eq("user_id", self.user_id).execute()
                 return True
             else:
-                print(f"找不到 ID {id} 的提醒記錄")
+                print(f"Reminder record with ID {id} not found")
                 return False
                 
         except Exception as e:
-            print(f"更新提醒內容時發生錯誤：{str(e)}")
+            print(f"Error occurred while updating reminder: {str(e)}")
             return False
     
     def delete_reminder(self, id: str) -> str:
@@ -363,24 +363,24 @@ class UserReminderManager:
         Returns:
             str: Success or error message
         """
-        print(f"刪除提醒：ID {id}")
+        print(f"Deleting reminder: ID {id}")
         try:
             # Check if record exists
             response = supabase_admin.from_("reminders").select("*").eq("id", id).eq("user_id", self.user_id).execute()
             
             if not response.data:
-                return f"找不到 ID {id} 的提醒記錄"
+                return f"Reminder record with ID {id} not found"
             
             # Delete record
             result = supabase_admin.from_("reminders").delete().eq("id", id).eq("user_id", self.user_id).execute()
             
             if result.data:
-                return f"成功刪除提醒記錄，ID: {id}"
+                return f"Successfully deleted reminder record, ID: {id}"
             else:
-                return "刪除提醒記錄失敗"
+                return "Failed to delete reminder record"
                 
         except Exception as e:
-            error_msg = f"刪除提醒時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while deleting reminder: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -394,7 +394,7 @@ class UserReminderManager:
         Returns:
             str: Formatted reminders list or error message
         """
-        print(f"搜尋提醒 from user_id：{self.user_id}, keyword：{keyword}")
+        print(f"Searching reminders for user_id: {self.user_id}, keyword: {keyword}")
         try:
             # Search in description field
             response = supabase_admin.from_("reminders").select("id, description, remind_at, method, is_sent, sent_at, created_at").eq("user_id", self.user_id).or_(f"description.ilike.%{keyword}%").execute()
@@ -406,13 +406,13 @@ class UserReminderManager:
                     reminders_list.append(reminder_info)
                 content = "\n".join(reminders_list)
                 
-                print(f"搜尋結果：找到 {len(response.data)} 個提醒")
+                print(f"Search results: found {len(response.data)} reminders")
                 return content
             else:
-                return f"沒有找到包含關鍵字 '{keyword}' 的提醒"
+                return f"No reminders found containing keyword '{keyword}'"
         except Exception as e:
-            print(f"搜尋提醒時發生錯誤：{str(e)}")
-            return f"搜尋提醒時發生錯誤：{str(e)}"
+            print(f"Error occurred while searching reminders: {str(e)}")
+            return f"Error occurred while searching reminders: {str(e)}"
     
     def search_reminders_by_time(self, start_at: str, end_at: str) -> str:
         """
@@ -425,15 +425,15 @@ class UserReminderManager:
         Returns:
             str: Formatted reminders list or error message
         """
-        print(f"根據時間範圍搜尋提醒 from user_id：{self.user_id}, start_at：{start_at}, end_at：{end_at}")
+        print(f"Searching reminders by time range for user_id: {self.user_id}, start_at: {start_at}, end_at: {end_at}")
         try:
             # Convert user local time to UTC using UserTimeManager
             try:
                 start_at_utc = self.time_manager.convert_local_to_utc_time(start_at)
                 end_at_utc = self.time_manager.convert_local_to_utc_time(end_at)
-                print(f"start_at_utc：{start_at_utc}, end_at_utc：{end_at_utc}")
+                print(f"start_at_utc: {start_at_utc}, end_at_utc: {end_at_utc}")
             except Exception as e:
-                return f"時間轉換失敗，請確認時間格式是否正確：{str(e)}"
+                return f"Time conversion failed, please check time format: {str(e)}"
             
             # Import ReminderManager for recurring reminder logic (lazy import to avoid circular import)
             from app.lib.reminder_manager import ReminderManager
@@ -450,7 +450,7 @@ class UserReminderManager:
                     remind_at = reminder_data.get('remind_at', '')
                     remind_at_local = self.time_manager.convert_utc_to_local_time(remind_at)
                     
-                    reminder_info = f"ID: {reminder_data.get('id', '')}, Description: {reminder_data.get('description', '')}, Remind At: {remind_at_local}, Method: {reminder_data.get('method', '')}, Is Sent: {reminder_data.get('is_sent', '')}, Sent At: {reminder_data.get('sent_at', '')}, Created: {reminder_data.get('created_at', '')}, Type: 一次性提醒"
+                    reminder_info = f"ID: {reminder_data.get('id', '')}, Description: {reminder_data.get('description', '')}, Remind At: {remind_at_local}, Method: {reminder_data.get('method', '')}, Is Sent: {reminder_data.get('is_sent', '')}, Sent At: {reminder_data.get('sent_at', '')}, Created: {reminder_data.get('created_at', '')}, Type: One-time reminder"
                     one_time_reminders.append(reminder_info)
             
             # 2. Search recurring reminders
@@ -483,7 +483,7 @@ class UserReminderManager:
                                 original_remind_at = datetime.fromisoformat(reminder_data.get('remind_at', '').replace('Z', '+00:00'))
                                 rule_display = reminder_manager.parse_recurrence_rule_for_display(recurrence_rule, original_remind_at)
                                 
-                                reminder_info = f"ID: {reminder_data.get('id', '')}, Description: {reminder_data.get('description', '')}, Remind At: {remind_at_local}, Method: {reminder_data.get('method', '')}, Rule: {rule_display}, Created: {reminder_data.get('created_at', '')}, Type: 重複性提醒"
+                                reminder_info = f"ID: {reminder_data.get('id', '')}, Description: {reminder_data.get('description', '')}, Remind At: {remind_at_local}, Method: {reminder_data.get('method', '')}, Rule: {rule_display}, Created: {reminder_data.get('created_at', '')}, Type: Recurring reminder"
                                 recurring_reminders.append(reminder_info)
                     
                     current_date += timedelta(days=1)
@@ -493,11 +493,11 @@ class UserReminderManager:
             
             if all_reminders:
                 content = "\n".join(all_reminders)
-                print(f"搜尋結果：找到 {len(one_time_reminders)} 個一次性提醒，{len(recurring_reminders)} 個重複性提醒實例")
+                print(f"Search results: found {len(one_time_reminders)} one-time reminders, {len(recurring_reminders)} recurring reminder instances")
                 return content
             else:
-                return f"沒有找到在時間範圍 '{start_at}' 到 '{end_at}' 之間的提醒"
+                return f"No reminders found in time range '{start_at}' to '{end_at}'"
                 
         except Exception as e:
-            print(f"根據時間範圍搜尋提醒時發生錯誤：{str(e)}")
-            return f"根據時間範圍搜尋提醒時發生錯誤：{str(e)}"
+            print(f"Error occurred while searching reminders by time range: {str(e)}")
+            return f"Error occurred while searching reminders by time range: {str(e)}"

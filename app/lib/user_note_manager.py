@@ -28,14 +28,14 @@ class UserNoteManager:
         Returns:
             int: Number of notes for the user
         """
-        print(f"取得筆記數量 from user_id：{self.user_id}")
+        print(f"Getting note count for user_id: {self.user_id}")
         try:
             response = supabase_admin.from_("notes").select("*", count="exact").eq("user_id", self.user_id).execute()
             count = response.count if response.count is not None else 0
-            print(f"筆記數量：{count}")
+            print(f"Note count: {count}")
             return count
         except Exception as e:
-            print(f"取得筆記數量時發生錯誤：{str(e)}")
+            print(f"Error occurred while getting note count: {str(e)}")
             return 0
     
     def create_note(self, title: str, content: str) -> str:
@@ -49,20 +49,20 @@ class UserNoteManager:
         Returns:
             str: Success or error message
         """
-        print(f"添加筆記：Title {title}, Content {content}")
+        print(f"Creating note: Title {title}, Content {content}")
         try:
             # Get current notes count
             current_notes_count = self.get_note_count()
             
             if current_notes_count >= Constants.NOTES_MAX:
-                print(f"超過最大筆記上限：{Constants.NOTES_MAX}")
-                return f"無法新增筆記：達到最大筆記上限，最多只能新增 {Constants.NOTES_MAX} 個筆記"
+                print(f"Maximum notes limit exceeded: {Constants.NOTES_MAX}")
+                return f"Cannot create note: maximum notes limit reached, can only create up to {Constants.NOTES_MAX} notes"
                 
             # Check if note with same title already exists
             response = supabase_admin.from_("notes").select("*").eq("user_id", self.user_id).eq("title", title).execute()
             
             if response.data:
-                return f"已存在相同的 Title: {title} 記錄"
+                return f"Note with same title already exists: {title}"
             
             # Insert new record
             result = supabase_admin.from_("notes").insert({
@@ -73,12 +73,12 @@ class UserNoteManager:
             
             if result.data:
                 new_record = result.data[0]
-                return f"成功添加筆記，ID: {new_record.get('id', '')}, Title: {title}, Content: {content}"
+                return f"Successfully created note, ID: {new_record.get('id', '')}, Title: {title}, Content: {content}"
             else:
-                return "添加筆記失敗"
+                return "Failed to create note"
                 
         except Exception as e:
-            error_msg = f"添加筆記時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while creating note: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -89,7 +89,7 @@ class UserNoteManager:
         Returns:
             str: Formatted notes list or error message
         """
-        print(f"讀取全部筆記 from user_id：{self.user_id}")
+        print(f"Reading all notes for user: {self.user_id}")
         try:
             response = supabase_admin.from_("notes").select("id, title, content, created_at, updated_at").eq("user_id", self.user_id).execute()
             if response.data:
@@ -99,12 +99,12 @@ class UserNoteManager:
                     notes_list.append(note_info)
                 content = "\n".join(notes_list)
                 
-                print(f"筆記內容：{content}")
+                print(f"Note content: {content}")
                 return content
             else:
                 return "No notes found"
         except Exception as e:
-            print(f"讀取筆記內容時發生錯誤：{str(e)}")
+            print(f"Error occurred while reading notes: {str(e)}")
             return ""
     
     def read_note(self, id: str) -> str:
@@ -117,7 +117,7 @@ class UserNoteManager:
         Returns:
             str: Note information or error message
         """
-        print(f"讀取單個筆記 from user_id：{self.user_id}, note_id：{id}")
+        print(f"Reading single note for user: {self.user_id}, note_id: {id}")
         try:
             response = supabase_admin.from_("notes").select("id, title, content, created_at, updated_at").eq("id", id).eq("user_id", self.user_id).execute()
             
@@ -125,12 +125,12 @@ class UserNoteManager:
                 note_data = response.data[0]
                 note_info = f"ID: {note_data.get('id', '')}, Title: {note_data.get('title', '')}, Content: {note_data.get('content', '')}, Created: {note_data.get('created_at', '')}, Updated: {note_data.get('updated_at', '')}"
                 
-                print(f"筆記內容：{note_info}")
+                print(f"Note content: {note_info}")
                 return note_info
             else:
-                return f"找不到 ID {id} 的筆記記錄"
+                return f"Note with ID {id} not found"
         except Exception as e:
-            print(f"讀取筆記內容時發生錯誤：{str(e)}")
+            print(f"Error occurred while reading note: {str(e)}")
             return ""
     
     def update_note(self, id: str, title: str, content: str) -> bool:
@@ -145,7 +145,7 @@ class UserNoteManager:
         Returns:
             bool: True if updated successfully, False otherwise
         """
-        print(f"更新筆記內容：ID {id}, Title {title}, Content {content}")
+        print(f"Updating note: ID {id}, Title {title}, Content {content}")
         try:
             # Check if record exists
             response = supabase_admin.from_("notes").select("*").eq("id", id).eq("user_id", self.user_id).execute()
@@ -159,11 +159,11 @@ class UserNoteManager:
                 }).eq("id", id).eq("user_id", self.user_id).execute()
                 return True
             else:
-                print(f"找不到 ID {id} 的筆記記錄")
+                print(f"Note with ID {id} not found")
                 return False
                 
         except Exception as e:
-            print(f"更新筆記內容時發生錯誤：{str(e)}")
+            print(f"Error occurred while updating note: {str(e)}")
             return False
     
     def delete_note(self, id: str) -> str:
@@ -176,24 +176,24 @@ class UserNoteManager:
         Returns:
             str: Success or error message
         """
-        print(f"刪除筆記：ID {id}")
+        print(f"Deleting note: ID {id}")
         try:
             # Check if record exists
             response = supabase_admin.from_("notes").select("*").eq("id", id).eq("user_id", self.user_id).execute()
             
             if not response.data:
-                return f"找不到 ID {id} 的筆記記錄"
+                return f"Note with ID {id} not found"
             
             # Delete record
             result = supabase_admin.from_("notes").delete().eq("id", id).eq("user_id", self.user_id).execute()
             
             if result.data:
-                return f"成功刪除筆記記錄，ID: {id}"
+                return f"Successfully deleted note, ID: {id}"
             else:
-                return "刪除筆記記錄失敗"
+                return "Failed to delete note"
                 
         except Exception as e:
-            error_msg = f"刪除筆記時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while deleting note: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -207,7 +207,7 @@ class UserNoteManager:
         Returns:
             str: Formatted notes list or error message
         """
-        print(f"搜尋筆記 from user_id：{self.user_id}, keyword：{keyword}")
+        print(f"Searching notes for user: {self.user_id}, keyword: {keyword}")
         try:
             # Search in title and content fields
             response = supabase_admin.from_("notes").select("id, title, content, created_at, updated_at").eq("user_id", self.user_id).or_(f"title.ilike.%{keyword}%,content.ilike.%{keyword}%").execute()
@@ -219,13 +219,13 @@ class UserNoteManager:
                     notes_list.append(note_info)
                 content = "\n".join(notes_list)
                 
-                print(f"搜尋結果：找到 {len(response.data)} 個筆記")
+                print(f"Search results: found {len(response.data)} notes")
                 return content
             else:
-                return f"沒有找到包含關鍵字 '{keyword}' 的筆記"
+                return f"No notes found containing keyword '{keyword}'"
         except Exception as e:
-            print(f"搜尋筆記時發生錯誤：{str(e)}")
-            return f"搜尋筆記時發生錯誤：{str(e)}"
+            print(f"Error occurred while searching notes: {str(e)}")
+            return f"Error occurred while searching notes: {str(e)}"
     
     def search_notes_by_time(self, start_at: str, end_at: str) -> str:
         """
@@ -238,7 +238,7 @@ class UserNoteManager:
         Returns:
             str: Formatted notes list or error message
         """
-        print(f"根據時間範圍搜尋筆記 from user_id：{self.user_id}, start_at：{start_at}, end_at：{end_at}")
+        print(f"Searching notes by time range for user: {self.user_id}, start_at: {start_at}, end_at: {end_at}")
         try:
             # Convert user local time to UTC
             start_at_utc, start_info = convert_user_local_to_utc_time(self.user_id, start_at)
@@ -246,9 +246,9 @@ class UserNoteManager:
             
             # Check if conversion was successful
             if "error" in start_info or "error" in end_info:
-                return f"時間轉換失敗，請確認時間格式是否正確"
+                return f"Time conversion failed, please check time format"
             
-            print(f"start_at_utc：{start_at_utc}, end_at_utc：{end_at_utc}")
+            print(f"start_at_utc: {start_at_utc}, end_at_utc: {end_at_utc}")
             
             # Search by time range
             response = supabase_admin.from_("notes").select("id, title, content, created_at, updated_at").eq("user_id", self.user_id).or_(f"created_at.gte.{start_at_utc},created_at.lte.{end_at_utc},updated_at.gte.{start_at_utc},updated_at.lte.{end_at_utc}").execute()
@@ -260,10 +260,10 @@ class UserNoteManager:
                     notes_list.append(note_info)
                 content = "\n".join(notes_list)
                 
-                print(f"時間範圍搜尋結果：找到 {len(response.data)} 個筆記")
+                print(f"Time range search results: found {len(response.data)} notes")
                 return content
             else:
-                return f"沒有找到在時間範圍 '{start_at}' 到 '{end_at}' 之間創建或更新的筆記"
+                return f"No notes found in time range '{start_at}' to '{end_at}'"
         except Exception as e:
-            print(f"根據時間範圍搜尋筆記時發生錯誤：{str(e)}")
-            return f"根據時間範圍搜尋筆記時發生錯誤：{str(e)}"
+            print(f"Error occurred while searching notes by time range: {str(e)}")
+            return f"Error occurred while searching notes by time range: {str(e)}"

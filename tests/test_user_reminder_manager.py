@@ -8,11 +8,11 @@ from tests.mock_supabase_admin import MockSupabaseAdmin, create_mock_response, c
 
 def setup_user_time_manager_mock(mocker: MockFixture):
     """
-    設置 UserTimeManager 的 supabase 客戶端 mock
-    讓 UserTimeManager 可以正常工作但不會真的連接數據庫
+    Set up UserTimeManager's supabase client mock
+    Allows UserTimeManager to work normally without actually connecting to database
     """
-    # Mock time_utils 中使用的 supabase 客戶端
-    # 用於獲取用戶時區信息
+    # Mock supabase client used in time_utils
+    # Used for getting user timezone information
     mock_profiles_response = create_mock_response(data=[{
         "timezone": "Asia/Taipei"
     }])
@@ -20,7 +20,7 @@ def setup_user_time_manager_mock(mocker: MockFixture):
     mock_time_admin = MockSupabaseAdmin()
     mock_time_admin.set_responses("profiles", [mock_profiles_response])
     
-    # Patch time_utils 使用的 supabase_admin
+    # Patch supabase_admin used by time_utils
     mocker.patch('app.lib.utils.time_utils.supabase_admin', mock_time_admin)
     
     return mock_time_admin
@@ -56,7 +56,7 @@ def test_get_reminder_method_missing_profile(mocker: MockFixture):
     manager = UserReminderManager("550e8400-e29b-41d4-a716-446655440001")
     result = manager.get_reminder_method()
 
-    assert "找不到" in result
+    assert "Profile record not found" in result
 
 
 def test_set_reminder_method_updates_value(mocker: MockFixture):
@@ -71,7 +71,7 @@ def test_set_reminder_method_updates_value(mocker: MockFixture):
     manager = UserReminderManager("550e8400-e29b-41d4-a716-446655440002")
     result = manager.set_reminder_method("notification")
 
-    assert result == "成功設定提醒方法為：notification"
+    assert result == "Successfully set reminder method to: notification"
     last_update = mock_admin.get_last_update("profiles")
     assert last_update["payload"]["reminder_method"] == "notification"
 
@@ -81,7 +81,7 @@ def test_set_reminder_method_rejects_invalid_value():
     manager = UserReminderManager("550e8400-e29b-41d4-a716-446655440003")
     result = manager.set_reminder_method("email")
 
-    assert "錯誤" in result
+    assert "Error" in result
 
 
 # ========== One-time Reminder Tests ==========
@@ -108,7 +108,7 @@ def test_create_one_time_reminder_success(mocker: MockFixture):
         is_recurring=False
     )
 
-    assert "成功添加提醒" in result
+    assert "Successfully created reminder" in result
     assert "test-reminder-id-123" in result
     
     # Check insert was called
@@ -139,7 +139,7 @@ def test_create_one_time_reminder_with_timezone(mocker: MockFixture):
         is_recurring=False
     )
 
-    assert "成功添加提醒" in result
+    assert "Successfully created reminder" in result
 
 
 def test_create_one_time_reminder_duplicate_rejected(mocker: MockFixture):
@@ -163,7 +163,7 @@ def test_create_one_time_reminder_duplicate_rejected(mocker: MockFixture):
         is_recurring=False
     )
 
-    assert "已存在相同的提醒記錄" in result
+    assert "Reminder with same time and method already exists" in result
     # Should not reach insert
     assert mock_admin.get_call_count("insert", "reminders") == 0
 
@@ -192,8 +192,8 @@ def test_create_daily_recurring_reminder(mocker: MockFixture):
         recurrence_rule="FREQ=DAILY"
     )
 
-    assert "成功添加提醒" in result
-    assert "重複提醒: 是" in result
+    assert "Successfully created reminder" in result
+    assert "Recurring: Yes" in result
     
     # Check insert payload
     last_insert = mock_admin.get_last_insert("reminders")
@@ -223,8 +223,8 @@ def test_create_weekly_recurring_reminder(mocker: MockFixture):
         recurrence_rule="FREQ=WEEKLY;BYDAY=WE"
     )
 
-    assert "成功添加提醒" in result
-    assert "重複提醒: 是" in result
+    assert "Successfully created reminder" in result
+    assert "Recurring: Yes" in result
     
     # Check insert payload
     last_insert = mock_admin.get_last_insert("reminders")
@@ -255,8 +255,8 @@ def test_create_monthly_recurring_reminder_with_exceptions(mocker: MockFixture):
         recurrence_exceptions="2025-01-01, 2025-07-01"
     )
 
-    assert "成功添加提醒" in result
-    assert "重複提醒: 是" in result
+    assert "Successfully created reminder" in result
+    assert "Recurring: Yes" in result
     
     # Check that exceptions were processed
     last_insert = mock_admin.get_last_insert("reminders")
@@ -274,7 +274,7 @@ def test_create_recurring_reminder_missing_rule():
         # Missing recurrence_rule
     )
 
-    assert "錯誤：設定為重複提醒時必須提供 recurrence_rule" in result
+    assert "Error: recurrence_rule is required when is_recurring is true" in result
 
 
 def test_create_reminder_exceeds_limit(mocker: MockFixture):
@@ -298,7 +298,7 @@ def test_create_reminder_exceeds_limit(mocker: MockFixture):
         is_recurring=False
     )
 
-    assert "達到最大提醒" in result or "最大提醒數量上限" in result
+    assert "Cannot create reminder: maximum reminders limit" in result
 
 
 def test_create_reminder_invalid_method():
@@ -311,7 +311,7 @@ def test_create_reminder_invalid_method():
         is_recurring=False
     )
 
-    assert "錯誤：method 必須是" in result
+    assert "Error: method must be one of" in result
 
 
 def test_create_reminder_invalid_time_format(mocker: MockFixture):
@@ -327,8 +327,8 @@ def test_create_reminder_invalid_time_format(mocker: MockFixture):
         is_recurring=False
     )
 
-    # UserTimeManager 的真實邏輯會處理無效時間格式
-    assert "錯誤：時間格式不正確" in result or "添加提醒時發生錯誤" in result
+    # Real UserTimeManager logic will handle invalid time format
+    assert "Error occurred while creating reminder" in result
 
 
 # ========== Real Time Conversion Tests ==========
@@ -357,7 +357,7 @@ def test_time_conversion_with_different_formats(mocker: MockFixture):
         is_recurring=False
     )
     
-    assert "成功添加提醒" in result
+    assert "Successfully created reminder" in result
     
     # Check that the time was converted properly
     last_insert = mock_admin.get_last_insert("reminders")
@@ -393,7 +393,7 @@ def test_timezone_handling_with_user_timezone(mocker: MockFixture):
         is_recurring=False
     )
     
-    assert "成功添加提醒" in result
+    assert "Successfully created reminder" in result
 
 
 # ========== Read Reminder Tests ==========
@@ -486,7 +486,7 @@ def test_delete_reminder_success(mocker: MockFixture):
     manager = UserReminderManager("550e8400-e29b-41d4-a716-446655440019")
     result = manager.delete_reminder("reminder-1")
 
-    assert "成功刪除提醒記錄，ID: reminder-1" in result
+    assert "Successfully deleted reminder record, ID: reminder-1" in result
     assert mock_admin.get_call_count("delete", "reminders") == 1
 
 
@@ -538,7 +538,7 @@ def test_search_reminders_by_time_range_with_real_time_manager(mocker: MockFixtu
 
     assert "ID: reminder-1" in result
     assert "One-time reminder" in result
-    assert "Type: 一次性提醒" in result
+    assert "Type: One-time" in result
 
 
 def test_search_reminders_invalid_time_with_real_time_manager(mocker: MockFixture):
@@ -550,4 +550,4 @@ def test_search_reminders_invalid_time_with_real_time_manager(mocker: MockFixtur
     result = manager.search_reminders_by_time("invalid-start-time", "invalid-end-time")
 
     # Real UserTimeManager should handle invalid time gracefully
-    assert "時間轉換失敗" in result or "根據時間範圍搜尋提醒時發生錯誤" in result
+    assert "Error occurred while searching reminders by time range" in result

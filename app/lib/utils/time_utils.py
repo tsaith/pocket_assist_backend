@@ -5,81 +5,81 @@ from app.lib.supabase import supabase_admin
 
 
 def get_weekday(timezone: str) -> str:
-    """獲取指定時區的今天是星期幾"""
+    """Get today's weekday in the specified timezone"""
 
     try:
-        # 1. 設定指定時區
+        # 1. Set specified timezone
         target_tz = ZoneInfo(timezone)
         
-        # 2. 取得指定時區的當前時間
+        # 2. Get current time in specified timezone
         target_time = datetime.now(target_tz)
         
-        # 3. 獲取星期幾（數字 1=星期一, 7=星期日，符合 ISO 標準）
+        # 3. Get weekday (number 1=Monday, 7=Sunday, following ISO standard)
         iso_weekday_num = target_time.isoweekday()
         
-        # 4. 轉換為英文星期名稱
+        # 4. Convert to English weekday name
         weekday_names = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         weekday = weekday_names[iso_weekday_num]
         
         return weekday
         
     except Exception as e:
-        error_msg = f"獲取 {timezone} 時區星期幾時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while getting weekday for {timezone} timezone: {str(e)}"
         print(error_msg)
         return error_msg
 
 
 def get_date(timezone: str) -> str:
-    """獲取指定時區的今天日期（ISO 格式：YYYY-MM-DD）"""
+    """Get today's date in the specified timezone (ISO format: YYYY-MM-DD)"""
 
     try:
-        # 1. 設定指定時區
+        # 1. Set specified timezone
         target_tz = ZoneInfo(timezone)
         
-        # 2. 取得指定時區的當前時間
+        # 2. Get current time in specified timezone
         target_time = datetime.now(target_tz)
         
-        # 3. 格式化日期為 ISO 格式（YYYY-MM-DD）
+        # 3. Format date to ISO format (YYYY-MM-DD)
         date_str = target_time.strftime("%Y-%m-%d")
         
         return date_str
         
     except Exception as e:
-        error_msg = f"獲取 {timezone} 時區日期時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while getting date for {timezone} timezone: {str(e)}"
         print(error_msg)
         return error_msg
 
 
 def get_current_time(timezone: str) -> str:
-    """獲取指定時區的當前時間（格式：YYYY-MM-DD HH:MM:SS）"""
+    """Get current time in the specified timezone (format: YYYY-MM-DD HH:MM:SS)"""
 
     try:
-        # 1. 設定指定時區
+        # 1. Set specified timezone
         target_tz = ZoneInfo(timezone)
         
-        # 2. 取得指定時區的當前時間
+        # 2. Get current time in specified timezone
         target_time = datetime.now(target_tz)
         
-        # 3. 格式化為日期時間字串（YYYY-MM-DD HH:MM:SS）
+        # 3. Format as datetime string (YYYY-MM-DD HH:MM:SS)
         time_str = target_time.strftime("%Y-%m-%d %H:%M:%S")
         
         return time_str
         
     except Exception as e:
-        error_msg = f"獲取 {timezone} 時區當前時間時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while getting current time for {timezone} timezone: {str(e)}"
         print(error_msg)
         return error_msg
 
 
 def get_user_timezone(user_id: str) -> str:
-    """從資料庫獲取指定使用者的時區資訊"""
+    """Get timezone information for specified user from database"""
 
     try:
-        # 從 profiles 表取得 timezone
+        # Get timezone from profiles table
         profile_response = supabase_admin.from_("profiles").select("timezone").eq("id", user_id).execute()
         
         if not profile_response.data:
-            error_msg = f"找不到 user ID {user_id} 的 profile 記錄"
+            error_msg = f"Cannot find profile record for user ID {user_id}"
             print(error_msg)
             return error_msg
         
@@ -88,225 +88,225 @@ def get_user_timezone(user_id: str) -> str:
         return timezone
         
     except Exception as e:
-        error_msg = f"獲取時區資訊時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while getting timezone information: {str(e)}"
         print(error_msg)
         return error_msg
 
 
 def get_relative_date(timezone: str, days_offset: int = 0) -> str:
     """
-    獲取指定時區的相對日期
+    Get relative date in specified timezone
     
     Args:
-        timezone: 時區
-        days_offset: 天數偏移 (-3=大前天, -2=前天, -1=昨天, 0=今天, 1=明天, 2=後天, 3=大後天)
+        timezone: Timezone
+        days_offset: Days offset (-3=three days ago, -2=day before yesterday, -1=yesterday, 0=today, 1=tomorrow, 2=day after tomorrow, 3=three days later)
     
     Returns:
-        str: 日期字符串 (YYYY-MM-DD)
+        str: Date string (YYYY-MM-DD)
     
     Examples:
-        get_relative_date("Asia/Taipei", 1)   # 明天
-        get_relative_date("Asia/Taipei", 2)   # 後天
-        get_relative_date("Asia/Taipei", -1)  # 昨天
-        get_relative_date("Asia/Taipei", -2)  # 前天
+        get_relative_date("Asia/Taipei", 1)   # tomorrow
+        get_relative_date("Asia/Taipei", 2)   # day after tomorrow
+        get_relative_date("Asia/Taipei", -1)  # yesterday
+        get_relative_date("Asia/Taipei", -2)  # day before yesterday
     """
     try:
-        # 設定指定時區
+        # Set specified timezone
         target_tz = ZoneInfo(timezone)
         
-        # 取得指定時區的當前日期
+        # Get current date in specified timezone
         current_time = datetime.now(target_tz)
         
-        # 計算目標日期
+        # Calculate target date
         target_date = current_time + timedelta(days=days_offset)
         
-        # 格式化為日期字串
+        # Format as date string
         date_str = target_date.strftime("%Y-%m-%d")
         
         return date_str
         
     except Exception as e:
-        error_msg = f"獲取相對日期時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while getting relative date: {str(e)}"
         print(error_msg)
         return error_msg
 
 
 def get_user_relative_date(user_id: str, days_offset: int = 0) -> str:
     """
-    獲取指定用戶時區的相對日期
+    Get relative date in specified user's timezone
     
     Args:
-        user_id: 用戶 ID
-        days_offset: 天數偏移 (-3=大前天, -2=前天, -1=昨天, 0=今天, 1=明天, 2=後天, 3=大後天)
+        user_id: User ID
+        days_offset: Days offset (-3=three days ago, -2=day before yesterday, -1=yesterday, 0=today, 1=tomorrow, 2=day after tomorrow, 3=three days later)
     
     Returns:
-        str: 日期字符串 (YYYY-MM-DD)
+        str: Date string (YYYY-MM-DD)
     
     Examples:
-        get_user_relative_date(user_id, 1)   # 明天
-        get_user_relative_date(user_id, 2)   # 後天
-        get_user_relative_date(user_id, -1)  # 昨天
+        get_user_relative_date(user_id, 1)   # tomorrow
+        get_user_relative_date(user_id, 2)   # day after tomorrow
+        get_user_relative_date(user_id, -1)  # yesterday
     """
     try:
-        # 獲取用戶時區
+        # Get user timezone
         user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否有錯誤
-        if "錯誤" in user_timezone or "找不到" in user_timezone:
+        # Check for errors
+        if "Error" in user_timezone or "Cannot find" in user_timezone:
             return user_timezone
         
-        # 調用 get_relative_date 函數
+        # Call get_relative_date function
         return get_relative_date(user_timezone, days_offset)
         
     except Exception as e:
-        error_msg = f"獲取用戶相對日期時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while getting user relative date: {str(e)}"
         print(error_msg)
         return error_msg
 
 
 def get_weekday_date(timezone: str, weekday: int, weeks_offset: int = 0) -> str:
     """
-    獲取指定時區的相對星期幾日期
+    Get relative weekday date in specified timezone
     
     Args:
-        timezone: 時區
-        weekday: 星期幾 (1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday)
-        weeks_offset: 周數偏移 (-2=上上週, -1=上週, 0=本週, 1=下週, 2=下下週)
+        timezone: Timezone
+        weekday: Weekday (1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday)
+        weeks_offset: Weeks offset (-2=two weeks ago, -1=last week, 0=this week, 1=next week, 2=two weeks later)
     
     Returns:
-        str: 日期字符串 (YYYY-MM-DD)
+        str: Date string (YYYY-MM-DD)
     
     Examples:
-        get_weekday_date("Asia/Taipei", 3, 1)  # 下週三
-        get_weekday_date("Asia/Taipei", 4, -1)  # 上週四
-        get_weekday_date("Asia/Taipei", 1, 2)  # 下下週一
+        get_weekday_date("Asia/Taipei", 3, 1)  # next Wednesday
+        get_weekday_date("Asia/Taipei", 4, -1)  # last Thursday
+        get_weekday_date("Asia/Taipei", 1, 2)  # Monday two weeks later
     """
     try:
-        # 驗證 weekday 參數
+        # Validate weekday parameter
         if not 1 <= weekday <= 7:
-            error_msg = f"weekday 必須在 1-7 之間 (1=Monday, 7=Sunday)，當前值：{weekday}"
+            error_msg = f"weekday must be between 1-7 (1=Monday, 7=Sunday), current value: {weekday}"
             print(error_msg)
             return error_msg
         
-        # 設定指定時區
+        # Set specified timezone
         target_tz = ZoneInfo(timezone)
         
-        # 取得指定時區的當前日期
+        # Get current date in specified timezone
         current_time = datetime.now(target_tz)
         current_weekday = current_time.isoweekday()  # 1=Monday, 7=Sunday
         
-        # 計算到目標星期幾的天數差異
+        # Calculate days difference to target weekday
         days_until_target = weekday - current_weekday
         
-        # 如果目標星期幾已經過去（在本週），則跳到下週
+        # If target weekday has passed (in this week), jump to next week
         if weeks_offset == 0 and days_until_target < 0:
             days_until_target += 7
         
-        # 加上週數偏移
+        # Add weeks offset
         total_days_offset = days_until_target + (weeks_offset * 7)
         
-        # 計算目標日期
+        # Calculate target date
         target_date = current_time + timedelta(days=total_days_offset)
         
-        # 格式化為日期字串
+        # Format as date string
         date_str = target_date.strftime("%Y-%m-%d")
         
         return date_str
         
     except Exception as e:
-        error_msg = f"獲取星期幾日期時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while getting weekday date: {str(e)}"
         print(error_msg)
         return error_msg
 
 
 def get_user_weekday_date(user_id: str, weekday: int, weeks_offset: int = 0) -> str:
     """
-    獲取指定用戶時區的相對星期幾日期
+    Get relative weekday date in specified user's timezone
     
     Args:
-        user_id: 用戶 ID
-        weekday: 星期幾 (1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday)
-        weeks_offset: 周數偏移 (-2=上上週, -1=上週, 0=本週, 1=下週, 2=下下週)
+        user_id: User ID
+        weekday: Weekday (1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday)
+        weeks_offset: Weeks offset (-2=two weeks ago, -1=last week, 0=this week, 1=next week, 2=two weeks later)
     
     Returns:
-        str: 日期字符串 (YYYY-MM-DD)
+        str: Date string (YYYY-MM-DD)
     
     Examples:
-        get_user_weekday_date(user_id, 3, 1)   # 下週三
-        get_user_weekday_date(user_id, 4, -1)  # 上週四
-        get_user_weekday_date(user_id, 1, 2)   # 下下週一
+        get_user_weekday_date(user_id, 3, 1)   # next Wednesday
+        get_user_weekday_date(user_id, 4, -1)  # last Thursday
+        get_user_weekday_date(user_id, 1, 2)   # Monday two weeks later
     """
     try:
-        # 獲取用戶時區
+        # Get user timezone
         user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否有錯誤
-        if "錯誤" in user_timezone or "找不到" in user_timezone:
+        # Check for errors
+        if "Error" in user_timezone or "Cannot find" in user_timezone:
             return user_timezone
         
-        # 調用 get_weekday_date 函數
+        # Call get_weekday_date function
         return get_weekday_date(user_timezone, weekday, weeks_offset)
         
     except Exception as e:
-        error_msg = f"獲取用戶星期幾日期時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while getting user weekday date: {str(e)}"
         print(error_msg)
         return error_msg
 
 
 def convert_utc_to_local_time(time_utc: str, timezone: str) -> str:
-    """將 UTC 時間轉換為指定時區的本地時間（ISO 8601/RFC 3339 格式）"""
+    """Convert UTC time to local time in specified timezone (ISO 8601/RFC 3339 format)"""
     try:
-        # 解析 UTC 時間
+        # Parse UTC time
         utc_dt = datetime.fromisoformat(time_utc.replace('Z', '+00:00'))
         
-        # 如果時間沒有時區信息，設置為 UTC
+        # If time has no timezone info, set as UTC
         if utc_dt.tzinfo is None:
             utc_dt = utc_dt.replace(tzinfo=ZoneInfo('UTC'))
         
-        # 轉換到指定時區
+        # Convert to specified timezone
         local_tz = ZoneInfo(timezone)
         local_dt = utc_dt.astimezone(local_tz)
         
-        # 返回本地時間字符串（ISO 8601/RFC 3339 格式，包含時區信息）
+        # Return local time string (ISO 8601/RFC 3339 format, including timezone info)
         return local_dt.isoformat()
         
     except Exception as e:
-        print(f"轉換 UTC 時間到本地時間時發生錯誤：{str(e)}")
+        print(f"Error occurred while converting UTC time to local time: {str(e)}")
         return time_utc
 
 
 def convert_local_to_utc_time(time_local: str, timezone: str) -> str:
-    """將本地時區時間轉換為 UTC 時間（ISO 8601/RFC 3339 格式）"""
+    """Convert local timezone time to UTC time (ISO 8601/RFC 3339 format)"""
     try:
-        # 解析本地時間
+        # Parse local time
         local_dt = datetime.fromisoformat(time_local)
         
-        # 設置本地時區
+        # Set local timezone
         local_tz = ZoneInfo(timezone)
         local_dt = local_dt.replace(tzinfo=local_tz)
         
-        # 轉換到 UTC
+        # Convert to UTC
         utc_dt = local_dt.astimezone(ZoneInfo('UTC'))
         
-        # 返回 UTC 時間字符串（ISO 8601/RFC 3339 格式，以 Z 結尾表示 UTC）
+        # Return UTC time string (ISO 8601/RFC 3339 format, ending with Z to indicate UTC)
         return utc_dt.isoformat().replace('+00:00', 'Z')
         
     except Exception as e:
-        print(f"轉換本地時間到 UTC 時間時發生錯誤：{str(e)}")
+        print(f"Error occurred while converting local time to UTC time: {str(e)}")
         return time_local
 
 
 def convert_user_local_to_utc_time(user_id: str, time_local: str) -> Tuple[str, dict]:
-    """將用戶本地時間轉換為 UTC 時間（ISO 8601/RFC 3339 格式）"""
+    """Convert user local time to UTC time (ISO 8601/RFC 3339 format)"""
     try:
-        # 獲取用戶時區
+        # Get user timezone
         user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否有錯誤
-        if "錯誤" in user_timezone or "找不到" in user_timezone:
+        # Check for errors
+        if "Error" in user_timezone or "Cannot find" in user_timezone:
             return time_local, {"error": user_timezone}
         
-        # 轉換時間
+        # Convert time
         utc_time = convert_local_to_utc_time(time_local, user_timezone)
         
         result_info = {
@@ -320,22 +320,22 @@ def convert_user_local_to_utc_time(user_id: str, time_local: str) -> Tuple[str, 
         return utc_time, result_info
         
     except Exception as e:
-        error_msg = f"轉換用戶本地時間到 UTC 時間時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while converting user local time to UTC time: {str(e)}"
         print(error_msg)
         return time_local, {"error": str(e)}
 
 
 def convert_utc_to_user_local_time(user_id: str, time_utc: str) -> Tuple[str, dict]:
-    """將 UTC 時間轉換為用戶所在時區的本地時間（ISO 8601/RFC 3339 格式）"""
+    """Convert UTC time to user's local time in their timezone (ISO 8601/RFC 3339 format)"""
     try:
-        # 獲取用戶時區
+        # Get user timezone
         user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否有錯誤
-        if "錯誤" in user_timezone or "找不到" in user_timezone:
+        # Check for errors
+        if "Error" in user_timezone or "Cannot find" in user_timezone:
             return time_utc, {"error": user_timezone}
         
-        # 轉換時間
+        # Convert time
         local_time = convert_utc_to_local_time(time_utc, user_timezone)
         
         result_info = {
@@ -349,64 +349,64 @@ def convert_utc_to_user_local_time(user_id: str, time_utc: str) -> Tuple[str, di
         return local_time, result_info
         
     except Exception as e:
-        error_msg = f"轉換 UTC 時間到用戶本地時間時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while converting UTC time to user local time: {str(e)}"
         print(error_msg)
         return time_utc, {"error": str(e)}
 
 
 def convert_local_to_utc_date(date_local: str, timezone: str) -> str:
-    """將本地時區日期轉換為 UTC 日期"""
+    """Convert local timezone date to UTC date"""
     try:
-        # 解析本地日期（假設是午夜時間）
+        # Parse local date (assuming midnight time)
         local_dt = datetime.strptime(date_local, '%Y-%m-%d')
         
-        # 設置本地時區
+        # Set local timezone
         local_tz = ZoneInfo(timezone)
         local_dt = local_dt.replace(tzinfo=local_tz)
         
-        # 轉換到 UTC
+        # Convert to UTC
         utc_dt = local_dt.astimezone(ZoneInfo('UTC'))
         
-        # 返回 UTC 日期字符串
+        # Return UTC date string
         return utc_dt.strftime('%Y-%m-%d')
         
     except Exception as e:
-        print(f"轉換本地日期到 UTC 日期時發生錯誤：{str(e)}")
+        print(f"Error occurred while converting local date to UTC date: {str(e)}")
         return date_local
 
 
 def convert_utc_to_local_date(date_utc: str, timezone: str) -> str:
-    """將 UTC 日期轉換為指定時區的本地日期"""
+    """Convert UTC date to local date in specified timezone"""
     try:
-        # 解析 UTC 日期（假設是午夜時間）
+        # Parse UTC date (assuming midnight time)
         utc_dt = datetime.strptime(date_utc, '%Y-%m-%d')
         
-        # 設置為 UTC 時區
+        # Set as UTC timezone
         utc_dt = utc_dt.replace(tzinfo=ZoneInfo('UTC'))
         
-        # 轉換到指定時區
+        # Convert to specified timezone
         local_tz = ZoneInfo(timezone)
         local_dt = utc_dt.astimezone(local_tz)
         
-        # 返回本地日期字符串
+        # Return local date string
         return local_dt.strftime('%Y-%m-%d')
         
     except Exception as e:
-        print(f"轉換 UTC 日期到本地日期時發生錯誤：{str(e)}")
+        print(f"Error occurred while converting UTC date to local date: {str(e)}")
         return date_utc
 
 
 def convert_user_local_to_utc_date(user_id: str, date_local: str) -> Tuple[str, dict]:
-    """將用戶本地日期轉換為 UTC 日期"""
+    """Convert user local date to UTC date"""
     try:
-        # 獲取用戶時區
+        # Get user timezone
         user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否有錯誤
-        if "錯誤" in user_timezone or "找不到" in user_timezone:
+        # Check for errors
+        if "Error" in user_timezone or "Cannot find" in user_timezone:
             return date_local, {"error": user_timezone}
         
-        # 轉換日期
+        # Convert date
         utc_date = convert_local_to_utc_date(date_local, user_timezone)
         
         result_info = {
@@ -420,22 +420,22 @@ def convert_user_local_to_utc_date(user_id: str, date_local: str) -> Tuple[str, 
         return utc_date, result_info
         
     except Exception as e:
-        error_msg = f"轉換用戶本地日期到 UTC 日期時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while converting user local date to UTC date: {str(e)}"
         print(error_msg)
         return date_local, {"error": str(e)}
 
 
 def convert_utc_to_user_local_date(user_id: str, date_utc: str) -> Tuple[str, dict]:
-    """將 UTC 日期轉換為用戶所在時區的本地日期"""
+    """Convert UTC date to user's local date in their timezone"""
     try:
-        # 獲取用戶時區
+        # Get user timezone
         user_timezone = get_user_timezone(user_id)
         
-        # 檢查是否有錯誤
-        if "錯誤" in user_timezone or "找不到" in user_timezone:
+        # Check for errors
+        if "Error" in user_timezone or "Cannot find" in user_timezone:
             return date_utc, {"error": user_timezone}
         
-        # 轉換日期
+        # Convert date
         local_date = convert_utc_to_local_date(date_utc, user_timezone)
         
         result_info = {
@@ -449,6 +449,6 @@ def convert_utc_to_user_local_date(user_id: str, date_utc: str) -> Tuple[str, di
         return local_date, result_info
         
     except Exception as e:
-        error_msg = f"轉換 UTC 日期到用戶本地日期時發生錯誤：{str(e)}"
+        error_msg = f"Error occurred while converting UTC date to user local date: {str(e)}"
         print(error_msg)
         return date_utc, {"error": str(e)}

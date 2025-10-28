@@ -20,7 +20,7 @@ def test_create_bookkeeping_transaction_success(mocker: MockFixture):
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440000")
     result = manager.create_bookkeeping_transaction("cat-123", 100.0, "Lunch")
 
-    assert "成功添加記帳交易" in result
+    assert "Successfully created bookkeeping transaction" in result
     assert "trans-123" in result
     
     # Verify insert was called
@@ -42,7 +42,7 @@ def test_create_bookkeeping_category_success(mocker: MockFixture):
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440001")
     result = manager.create_bookkeeping_category("薪資", "income")
 
-    assert "成功添加記帳類別" in result
+    assert "Successfully created bookkeeping category" in result
     assert "cat-456" in result
     
     # Verify insert was called
@@ -62,7 +62,7 @@ def test_create_bookkeeping_transaction_category_not_found(mocker: MockFixture):
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440002")
     result = manager.create_bookkeeping_transaction("non-existent-cat", 100.0, "Lunch")
 
-    assert "找不到 ID non-existent-cat 的記帳類別" in result
+    assert "Bookkeeping category with ID non-existent-cat not found" in result
     # Should not insert
     assert mock_admin.get_call_count("insert", "bookkeeping_transactions") == 0
 
@@ -72,7 +72,7 @@ def test_create_bookkeeping_category_invalid_type():
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440003")
     result = manager.create_bookkeeping_category("測試", "invalid_type")
 
-    assert "類型必須是 'income' 或 'expense'" in result
+    assert "Type must be 'income' or 'expense'" in result
 
 
 def test_create_bookkeeping_category_duplicate(mocker: MockFixture):
@@ -86,7 +86,7 @@ def test_create_bookkeeping_category_duplicate(mocker: MockFixture):
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440004")
     result = manager.create_bookkeeping_category("食物", "expense")
 
-    assert "已存在相同的記帳類別" in result
+    assert "Bookkeeping category already exists" in result
 
 
 def test_read_bookkeeping_transactions_success(mocker: MockFixture):
@@ -120,10 +120,10 @@ def test_read_bookkeeping_transactions_success(mocker: MockFixture):
     result = manager.read_bookkeeping_transactions()
 
     assert "ID: record-1" in result
-    assert "食物 (支出)" in result
+    assert "食物 (Expense)" in result
     assert "Lunch" in result
     assert "ID: record-2" in result
-    assert "薪資 (收入)" in result
+    assert "薪資 (Income)" in result
     assert "Salary" in result
 
 
@@ -208,7 +208,7 @@ def test_read_single_bookkeeping_transaction_success(mocker: MockFixture):
     result = manager.read_bookkeeping_transaction("record-1")
 
     assert "ID: record-1" in result
-    assert "食物 (支出)" in result
+    assert "食物 (Expense)" in result
     assert "Lunch" in result
 
 
@@ -223,7 +223,7 @@ def test_read_single_bookkeeping_transaction_not_found(mocker: MockFixture):
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440010")
     result = manager.read_bookkeeping_transaction("non-existent-id")
 
-    assert "找不到 ID non-existent-id 的記帳交易" in result
+    assert "Bookkeeping transaction with ID non-existent-id not found" in result
 
 
 def test_update_bookkeeping_transaction_success(mocker: MockFixture):
@@ -272,7 +272,7 @@ def test_delete_bookkeeping_transaction_success(mocker: MockFixture):
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440013")
     result = manager.delete_bookkeeping_transaction("record-1")
 
-    assert "成功刪除記帳交易" in result
+    assert "Successfully deleted bookkeeping transaction" in result
     assert mock_admin.get_call_count("delete", "bookkeeping_transactions") == 1
 
 
@@ -287,7 +287,7 @@ def test_delete_bookkeeping_transaction_not_found(mocker: MockFixture):
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440014")
     result = manager.delete_bookkeeping_transaction("non-existent-id")
 
-    assert "找不到 ID non-existent-id 的記帳交易" in result
+    assert "Bookkeeping transaction with ID non-existent-id not found" in result
 
 
 def test_search_bookkeeping_transactions_success(mocker: MockFixture):
@@ -325,7 +325,7 @@ def test_search_bookkeeping_transactions_no_results(mocker: MockFixture):
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440016")
     result = manager.search_bookkeeping_transactions("nonexistent")
 
-    assert "沒有找到包含關鍵字 'nonexistent' 的記帳交易" in result
+    assert "No bookkeeping transactions found containing keyword 'nonexistent'" in result
 
 
 def test_search_bookkeeping_transactions_by_date_success(mocker: MockFixture):
@@ -364,4 +364,4 @@ def test_search_bookkeeping_transactions_by_date_no_results(mocker: MockFixture)
     manager = UserBookkeepingManager("550e8400-e29b-41d4-a716-446655440018")
     result = manager.search_bookkeeping_transactions_by_date("2024-01-01", "2024-01-31")
 
-    assert "沒有找到在日期範圍 '2024-01-01' 到 '2024-01-31' 之間的記帳交易" in result
+    assert "No bookkeeping transactions found in date range '2024-01-01' to '2024-01-31'" in result

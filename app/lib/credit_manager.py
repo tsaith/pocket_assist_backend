@@ -74,7 +74,7 @@ class CreditManager:
                         updated_at=data['updated_at']
                     )
                 else:
-                    raise Exception('創建 credit 記錄失敗')
+                    raise Exception('Failed to create credit record')
             
         except Exception as error:
             print(f'Error in get_credit_balance: {error}')
@@ -181,7 +181,7 @@ class CreditManager:
             }).execute()
             
             if not response.data or len(response.data) == 0:
-                raise Exception('創建交易記錄失敗')
+                raise Exception('Failed to create transaction record')
             
             transaction_data = response.data[0]
             return CreditTransaction(
@@ -214,7 +214,7 @@ class CreditManager:
             }).eq('user_id', user_id).execute()
             
             if not response.data or len(response.data) == 0:
-                raise Exception('更新 credit 餘額失敗')
+                raise Exception('Failed to update credit balance')
             
             data = response.data[0]
             return CreditBalance(
@@ -230,7 +230,7 @@ class CreditManager:
     async def consume_credits(
         user_id: str,
         amount: float,
-        description: str = 'Chatbot 對話消費',
+        description: str = 'Chatbot conversation consumption',
         meta_data: Dict[str, Any] = {}
     ) -> float:
         """
@@ -280,7 +280,7 @@ class CreditManager:
     async def recharge_credits(
         user_id: str,
         amount: float,
-        description: str = '管理員充值',
+        description: str = 'Admin recharge',
         admin_user_id: Optional[str] = None
     ) -> float:
         """
@@ -295,7 +295,7 @@ class CreditManager:
         """
         try:
             if amount <= 0:
-                raise Exception('充值金額必須大於 0')
+                raise Exception('Recharge amount must be greater than 0')
             
             # Get current balance
             current_balance = await CreditManager.get_credit_balance(user_id)
@@ -348,7 +348,7 @@ class CreditManager:
             updated_balance = await CreditManager.consume_credits(
                 user_id,
                 credits_consumed,
-                f'Chatbot tokens 消耗: {tokens} tokens = {credits_consumed} credits',
+                f'Chatbot tokens consumption: {tokens} tokens = {credits_consumed} credits',
                 {
                     'operation_type': 'chatbot_token_consumption',
                     'tokens_consumed': tokens
@@ -374,7 +374,7 @@ class CreditManager:
             result = supabase_admin.auth.admin.list_users()
             
             if result.error:
-                raise Exception(f'查詢用戶時發生錯誤: {result.error.message}')
+                raise Exception(f'Error occurred while querying user: {result.error.message}')
             
             found_user = None
             for user in result.users:
@@ -383,7 +383,7 @@ class CreditManager:
                     break
             
             if not found_user:
-                raise Exception(f'找不到 email 為 {email} 的用戶')
+                raise Exception(f'Cannot find user with email {email}')
             
             return found_user
             

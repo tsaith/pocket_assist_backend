@@ -8,7 +8,7 @@ from app.core.config import settings
 
 class ReminderManager:
     """
-    提醒管理器，負責處理提醒的觸發邏輯
+    Reminder manager responsible for handling reminder trigger logic
     """
     
     def __init__(self):
@@ -16,25 +16,25 @@ class ReminderManager:
     
     def should_reminder_occur_today(self, reminder: Dict[str, Any], today: datetime) -> bool:
         """
-        檢查重複性提醒是否應該在今天觸發
+        Check if recurring reminder should be triggered today
         
         Args:
-            reminder: 提醒資料
-            today: 今天日期
+            reminder: Reminder data
+            today: Today's date
             
         Returns:
-            bool: 是否應該觸發
+            bool: Whether it should be triggered
         """
         try:
             is_recurring = reminder.get('is_recurring', False)
             recurrence_rule = reminder.get('recurrence_rule', '')
             remind_at = datetime.fromisoformat(reminder.get('remind_at', '').replace('Z', '+00:00'))
             
-            # 如果不是重複性提醒，檢查是否為今天
+            # If not recurring reminder, check if it's today
             if not is_recurring:
                 return remind_at.date() == today.date()
             
-            # 檢查例外日期
+            # Check exception dates
             recurrence_exceptions = reminder.get('recurrence_exceptions', [])
             if recurrence_exceptions:
                 today_str = today.date().isoformat()
@@ -42,37 +42,37 @@ class ReminderManager:
                     if exception and today_str in str(exception):
                         return False
             
-            # 解析重複規則
+            # Parse recurrence rule
             if not recurrence_rule:
                 return False
                 
-            # 檢查是否在開始日期之後
+            # Check if after start date
             if remind_at.date() > today.date():
                 return False
             
-            # 解析不同的重複規則
+            # Parse different recurrence rules
             if 'FREQ=DAILY' in recurrence_rule:
-                # 每日提醒
+                # Daily reminder
                 return True
             elif 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR' in recurrence_rule:
-                # 工作日提醒
+                # Weekday reminder
                 return today.weekday() < 5  # Monday=0, Friday=4
             elif 'FREQ=WEEKLY' in recurrence_rule:
-                # 每週提醒 - 支援多個星期幾
+                # Weekly reminder - support multiple weekdays
                 if 'BYDAY=' in recurrence_rule:
-                    # 解析多個星期幾
+                    # Parse multiple weekdays
                     byday_match = re.search(r'BYDAY=([^;]+)', recurrence_rule)
                     if byday_match:
                         days = byday_match.group(1).split(',')
                         today_weekday_code = self._get_weekday_code(today.weekday())
                         return today_weekday_code in [day.strip() for day in days]
                 else:
-                    # 沒有 BYDAY，使用原始提醒的星期幾
+                    # No BYDAY, use original reminder's weekday
                     return remind_at.weekday() == today.weekday()
             elif 'FREQ=MONTHLY' in recurrence_rule:
-                # 每月提醒 - 支援多個日期
+                # Monthly reminder - support multiple dates
                 if 'BYMONTHDAY=' in recurrence_rule:
-                    # 解析多個日期
+                    # Parse multiple dates
                     bymonthday_match = re.search(r'BYMONTHDAY=([^;]+)', recurrence_rule)
                     if bymonthday_match:
                         days = bymonthday_match.group(1).split(',')
@@ -80,67 +80,67 @@ class ReminderManager:
                             target_days = [int(day.strip()) for day in days if day.strip().isdigit()]
                             return today.day in target_days
                         except ValueError:
-                            # 如果解析失敗，回退到原始邏輯
+                            # If parsing fails, fallback to original logic
                             return remind_at.day == today.day
                     else:
                         return remind_at.day == today.day
                 else:
-                    # 沒有 BYMONTHDAY，使用原始提醒的日期
+                    # No BYMONTHDAY, use original reminder's date
                     return remind_at.day == today.day
             elif 'FREQ=YEARLY' in recurrence_rule:
-                # 每年提醒 - 檢查是否為相同的月份和日期
+                # Yearly reminder - check if same month and day
                 return remind_at.month == today.month and remind_at.day == today.day
             
             return False
             
         except Exception as e:
-            print(f"檢查重複性提醒時發生錯誤：{str(e)}")
+            print(f"Error occurred while checking recurring reminder: {str(e)}")
             return False
     
     def get_recurring_reminder_instance(self, reminder: Dict[str, Any], target_date: datetime) -> Optional[Dict[str, Any]]:
         """
-        為重複性提醒生成指定日期的實例
+        Generate instance for recurring reminder on specified date
         
         Args:
-            reminder: 原始提醒資料
-            target_date: 目標日期
+            reminder: Original reminder data
+            target_date: Target date
             
         Returns:
-            Dict[str, Any]: 生成的提醒實例，如果無法生成則返回 None
+            Dict[str, Any]: Generated reminder instance, returns None if unable to generate
         """
         try:
             if not reminder.get('is_recurring', False):
                 return reminder
             
-            # 獲取原始提醒的時間
+            # Get original reminder time
             original_remind_at = datetime.fromisoformat(reminder.get('remind_at', '').replace('Z', '+00:00'))
             original_time = original_remind_at.time()
             
-            # 創建目標日期的提醒時間
+            # Create reminder time for target date
             target_remind_at = datetime.combine(target_date.date(), original_time)
             target_remind_at = target_remind_at.replace(tzinfo=timezone.utc)
             
-            # 創建虛擬提醒實例
+            # Create virtual reminder instance
             virtual_reminder = reminder.copy()
             virtual_reminder['remind_at'] = target_remind_at.isoformat()
-            virtual_reminder['is_sent'] = False  # 重複性提醒的實例不應該標記為已發送
+            virtual_reminder['is_sent'] = False  # Recurring reminder instances should not be marked as sent
             virtual_reminder['sent_at'] = None
             
             return virtual_reminder
             
         except Exception as e:
-            print(f"生成重複性提醒實例時發生錯誤：{str(e)}")
+            print(f"Error occurred while generating recurring reminder instance: {str(e)}")
             return None
     
     def parse_recurrence_rule(self, rule: str) -> Dict[str, Any]:
         """
-        解析 iCalendar RRULE 格式的重複規則
+        Parse iCalendar RRULE format recurrence rule
         
         Args:
-            rule: RRULE 字串
+            rule: RRULE string
             
         Returns:
-            Dict[str, Any]: 解析後的規則資訊
+            Dict[str, Any]: Parsed rule information
         """
         try:
             if not rule:
@@ -180,7 +180,7 @@ class ReminderManager:
             return parsed_rule
             
         except Exception as e:
-            print(f"解析重複規則時發生錯誤：{str(e)}")
+            print(f"Error occurred while parsing recurrence rule: {str(e)}")
             return {}
     
     async def get_recurring_reminders_for_today(self) -> List[Dict[str, Any]]:
@@ -210,11 +210,11 @@ class ReminderManager:
                     if instance:
                         recurring_reminders.append(instance)
             
-            print(f"找到 {len(recurring_reminders)} 個今天應該觸發的重複性提醒")
+            print(f"Found {len(recurring_reminders)} recurring reminders that should be triggered today")
             return recurring_reminders
             
         except Exception as e:
-            print(f"獲取重複性提醒時發生錯誤：{str(e)}")
+            print(f"Error occurred while getting recurring reminders: {str(e)}")
             return []
     
     async def trigger_reminders(self) -> Dict[str, Any]:
@@ -235,7 +235,7 @@ class ReminderManager:
             # 計算185秒後的時間
             target_time = now + timedelta(seconds=185)
             
-            print(f"檢查提醒觸發條件：現在時間 {now}, 目標時間 {target_time}")
+            print(f"Checking reminder trigger conditions: current time {now}, target time {target_time}")
             
             triggered_reminders = []
             current_time = datetime.now(timezone.utc)
@@ -252,9 +252,9 @@ class ReminderManager:
                 }).eq("id", reminder_id).execute()
                 
                 if update_result.data:
-                    print(f"一次性提醒已觸發：reminder id={reminder_id}")
+                    print(f"One-time reminder triggered: reminder id={reminder_id}")
                     
-                    # 記錄觸發的提醒信息
+                    # Record triggered reminder information
                     triggered_info = {
                         "id": reminder_id,
                         "user_id": reminder.get('user_id'),
@@ -266,17 +266,17 @@ class ReminderManager:
                     }
                     triggered_reminders.append(triggered_info)
                 else:
-                    print(f"更新一次性提醒狀態失敗：reminder id={reminder_id}")
+                    print(f"Failed to update one-time reminder status: reminder id={reminder_id}")
             
-            # 2. 處理重複性提醒
+            # 2. Handle recurring reminders
             recurring_reminders = await self.get_recurring_reminders_for_today()
             for reminder in recurring_reminders:
                 # 檢查時間是否在觸發範圍內
                 remind_at = datetime.fromisoformat(reminder.get('remind_at', '').replace('Z', '+00:00'))
                 if now <= remind_at <= target_time:
-                    print(f"重複性提醒已觸發：reminder id={reminder.get('id')}")
+                    print(f"Recurring reminder triggered: reminder id={reminder.get('id')}")
                     
-                    # 記錄觸發的提醒信息（重複性提醒不更新資料庫狀態）
+                    # Record triggered reminder information (recurring reminders don't update database status)
                     triggered_info = {
                         "id": reminder.get('id'),
                         "user_id": reminder.get('user_id'),
@@ -289,26 +289,26 @@ class ReminderManager:
                     triggered_reminders.append(triggered_info)
             
             if not triggered_reminders:
-                print("沒有找到需要觸發的提醒")
+                print("No reminders found that need to be triggered")
                 return {
                     "success": True,
-                    "message": "沒有找到需要觸發的提醒",
+                    "message": "No reminders found that need to be triggered",
                     "triggered_count": 0,
                     "triggered_reminders": []
                 }
             
-            print(f"成功觸發 {len(triggered_reminders)} 個提醒")
+            print(f"Successfully triggered {len(triggered_reminders)} reminders")
             await self.send_reminders(triggered_reminders)
             
             return {
                 "success": True,
-                "message": f"成功觸發 {len(triggered_reminders)} 個提醒",
+                "message": f"Successfully triggered {len(triggered_reminders)} reminders",
                 "triggered_count": len(triggered_reminders),
                 "triggered_reminders": triggered_reminders
             }
             
         except Exception as e:
-            error_msg = f"觸發提醒時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while triggering reminders: {str(e)}"
             print(error_msg)
             return {
                 "success": False,
@@ -337,19 +337,19 @@ class ReminderManager:
             return response.data if response.data else []
             
         except Exception as e:
-            print(f"獲取一次性提醒時發生錯誤：{str(e)}")
+            print(f"Error occurred while getting one-time reminders: {str(e)}")
             return []
     
     def parse_recurrence_rule_for_display(self, rule: str, remind_at: datetime) -> str:
         """
-        解析重複規則並返回用於顯示的字串
+        Parse recurrence rule and return display string
         
         Args:
-            rule: RRULE 字串
-            remind_at: 提醒時間
+            rule: RRULE string
+            remind_at: Reminder time
             
         Returns:
-            str: 顯示用的重複規則字串
+            str: Display string for recurrence rule
         """
         try:
             if not rule:
@@ -385,31 +385,31 @@ class ReminderManager:
             return "Custom"
             
         except Exception as e:
-            print(f"解析重複規則顯示時發生錯誤：{str(e)}")
+            print(f"Error occurred while parsing recurrence rule for display: {str(e)}")
             return "Custom"
     
     def _get_weekday_name(self, weekday: int) -> str:
         """
-        獲取星期幾的名稱
+        Get weekday name
         
         Args:
-            weekday: 星期幾 (0=Monday, 6=Sunday)
+            weekday: Weekday number (0=Monday, 6=Sunday)
             
         Returns:
-            str: 星期幾名稱
+            str: Weekday name
         """
         weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         return weekdays[weekday] if 0 <= weekday <= 6 else "Unknown"
     
     def _get_month_name(self, month: int) -> str:
         """
-        獲取月份名稱
+        Get month name
         
         Args:
-            month: 月份 (1-12)
+            month: Month number (1-12)
             
         Returns:
-            str: 月份名稱
+            str: Month name
         """
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -417,13 +417,13 @@ class ReminderManager:
     
     def _parse_multiple_weekdays(self, rule: str) -> List[str]:
         """
-        從規則中解析多個星期幾
+        Parse multiple weekdays from rule
         
         Args:
-            rule: RRULE 字串
+            rule: RRULE string
             
         Returns:
-            List[str]: 星期幾列表
+            List[str]: List of weekdays
         """
         try:
             if 'BYDAY=' in rule:
@@ -434,18 +434,18 @@ class ReminderManager:
                     return [self._convert_weekday_code(day.strip()) for day in weekdays]
             return []
         except Exception as e:
-            print(f"解析多個星期幾時發生錯誤：{str(e)}")
+            print(f"Error occurred while parsing multiple weekdays: {str(e)}")
             return []
     
     def _parse_multiple_days(self, rule: str) -> List[int]:
         """
-        從規則中解析多個日期
+        Parse multiple days from rule
         
         Args:
-            rule: RRULE 字串
+            rule: RRULE string
             
         Returns:
-            List[int]: 日期列表
+            List[int]: List of days
         """
         try:
             if 'BYMONTHDAY=' in rule:
@@ -456,31 +456,31 @@ class ReminderManager:
                     return [int(day.strip()) for day in days if day.strip().isdigit()]
             return []
         except Exception as e:
-            print(f"解析多個日期時發生錯誤：{str(e)}")
+            print(f"Error occurred while parsing multiple days: {str(e)}")
             return []
     
     def _get_weekday_code(self, weekday: int) -> str:
         """
-        將 Python weekday 數字轉換為 iCalendar 星期幾代碼
+        Convert Python weekday number to iCalendar weekday code
         
         Args:
             weekday: Python weekday (0=Monday, 6=Sunday)
             
         Returns:
-            str: iCalendar 星期幾代碼 (MO, TU, WE, TH, FR, SA, SU)
+            str: iCalendar weekday code (MO, TU, WE, TH, FR, SA, SU)
         """
         weekday_codes = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
         return weekday_codes[weekday] if 0 <= weekday <= 6 else "MO"
     
     def _convert_weekday_code(self, code: str) -> str:
         """
-        轉換星期幾代碼為名稱
+        Convert weekday code to name
         
         Args:
-            code: 星期幾代碼 (MO, TU, WE, TH, FR, SA, SU)
+            code: Weekday code (MO, TU, WE, TH, FR, SA, SU)
             
         Returns:
-            str: 星期幾名稱
+            str: Weekday name
         """
         weekday_map = {
             'MO': 'Mon', 'TU': 'Tue', 'WE': 'Wed', 'TH': 'Thu',
@@ -490,19 +490,19 @@ class ReminderManager:
     
     async def get_todays_reminders(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        獲取今天的提醒（包括重複性提醒）
+        Get today's reminders (including recurring reminders)
         
         Args:
-            user_id: 可選的用戶ID，如果提供則只返回該用戶的提醒
+            user_id: Optional user ID, if provided only returns reminders for that user
             
         Returns:
-            List[Dict[str, Any]]: 今天的提醒列表
+            List[Dict[str, Any]]: List of today's reminders
         """
         try:
             today = datetime.now(timezone.utc)
             todays_reminders = []
             
-            # 構建查詢條件
+            # Build query conditions
             query = supabase_admin.from_("reminders").select(
                 "id, user_id, description, remind_at, method, is_recurring, recurrence_rule, recurrence_exceptions, status"
             ).eq("status", "active")
@@ -516,74 +516,74 @@ class ReminderManager:
                 return []
             
             for reminder in response.data:
-                # 檢查是否為今天
+                # Check if it's today
                 if not reminder.get('is_recurring', False):
-                    # 一次性提醒
+                    # One-time reminder
                     remind_at = datetime.fromisoformat(reminder.get('remind_at', '').replace('Z', '+00:00'))
                     if remind_at.date() == today.date():
                         todays_reminders.append(reminder)
                 else:
-                    # 重複性提醒
+                    # Recurring reminder
                     if self.should_reminder_occur_today(reminder, today):
                         instance = self.get_recurring_reminder_instance(reminder, today)
                         if instance:
                             todays_reminders.append(instance)
             
-            print(f"找到 {len(todays_reminders)} 個今天的提醒")
+            print(f"Found {len(todays_reminders)} reminders for today")
             return todays_reminders
             
         except Exception as e:
-            print(f"獲取今天的提醒時發生錯誤：{str(e)}")
+            print(f"Error occurred while getting today's reminders: {str(e)}")
             return []
 
     def get_user_id_by_reminder_id(self, reminder_id: str) -> Optional[str]:
         """
-        透過 reminder id 找到對應的 user_id
+        Find corresponding user_id through reminder id
         
         Args:
-            reminder_id: 提醒ID
+            reminder_id: Reminder ID
             
         Returns:
-            str: user_id，如果找不到則返回 None
+            str: user_id, returns None if not found
         """
         try:
-            # 首先從 reminders 表獲取 user_id
+            # First get user_id from reminders table
             reminder_response = supabase_admin.from_("reminders").select("user_id").eq("id", reminder_id).single().execute()
             
             if not reminder_response.data:
-                print(f"找不到 reminder_id {reminder_id} 的記錄")
+                print(f"Cannot find record for reminder_id {reminder_id}")
                 return None
             
             user_id = reminder_response.data.get('user_id')
             if not user_id:
-                print(f"reminder_id {reminder_id} 沒有關聯的 user_id")
+                print(f"reminder_id {reminder_id} has no associated user_id")
                 return None
             
             if user_id:
-                print(f"找到 reminder_id {reminder_id} 對應的 user_id: {user_id}")
+                print(f"Found user_id for reminder_id {reminder_id}: {user_id}")
                 return str(user_id)
             else:
-                print(f"reminder_id {reminder_id} 沒有關聯的 user_id")
+                print(f"reminder_id {reminder_id} has no associated user_id")
                 return None
                 
         except Exception as e:
-            print(f"透過 reminder_id 獲取 user_id 時發生錯誤: {str(e)}")
+            print(f"Error occurred while getting user_id through reminder_id: {str(e)}")
             return None
 
     async def send_reminders(self, triggered_reminders: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        發送提醒訊息給 LINE 用戶
+        Send reminder messages to LINE users
         
-        支援三種發送方式：
-        1. App 內部發送
-        2. LINE Official Account（推薦，統一管理）
-        3. Linebot（保留原有邏輯）
+        Supports three sending methods:
+        1. App internal sending
+        2. LINE Official Account (recommended, unified management)
+        3. Linebot (retain original logic)
         
         Args:
-            triggered_reminders: 已觸發的提醒列表
+            triggered_reminders: List of triggered reminders
             
         Returns:
-            Dict[str, Any]: 發送結果
+            Dict[str, Any]: Sending results
         """
         try:
             
@@ -597,21 +597,21 @@ class ReminderManager:
                 description = reminder.get('description', '')
                 method = reminder.get('method', 'app')
                 user_id = reminder.get('user_id')  # 從 triggered_reminders 中直接獲取
-                message = f"🔔 提醒：{description}"
+                message = f"🔔 Reminder: {description}"
                 
                 try:
                     if not user_id:
                         failed_count += 1
                         failed_details.append({
                             "reminder_id": reminder_id,
-                            "error": "無法取得 user_id"
+                            "error": "Unable to get user_id"
                         })
                         continue
 
                     line_user_id = None
                     linebot_success = False
 
-                    # 嘗試使用 App 內部發送訊息
+                    # Try using App internal sending
                     if method == 'app' or method == 'notification':
                         try:
                             result = await self.send_app_reminder(user_id, message)
@@ -624,7 +624,7 @@ class ReminderManager:
                                     "method": "app"
                                 })
                         except Exception as e:
-                            print(f"App 內部發送失敗，reminder_id: {reminder_id}, error: {str(e)}")
+                            print(f"App internal sending failed, reminder_id: {reminder_id}, error: {str(e)}")
 
                     if method == 'line' or method == 'notification':
                         try:
@@ -638,12 +638,12 @@ class ReminderManager:
                                     "method": "line"
                                 })
                         except Exception as e:
-                            print(f"Line 發送失敗，reminder_id: {reminder_id}, error: {str(e)}")
+                            print(f"Line sending failed, reminder_id: {reminder_id}, error: {str(e)}")
                     
-                    # 注意：linebot 方法已移除，因為不再使用 chatbot_id
+                    # Note: linebot method has been removed because chatbot_id is no longer used
 
                 except Exception as e:
-                    error_msg = f"處理提醒時發生錯誤，reminder_id: {reminder_id}, error: {str(e)}"
+                    error_msg = f"Error occurred while processing reminder, reminder_id: {reminder_id}, error: {str(e)}"
                     print(error_msg)
                     failed_count += 1
                     failed_details.append({
@@ -659,11 +659,11 @@ class ReminderManager:
                 "failed_details": failed_details
             }
             
-            print(f"提醒發送完成：成功 {sent_count} 個，失敗 {failed_count} 個")
+            print(f"Reminder sending completed: {sent_count} successful, {failed_count} failed")
             return result
             
         except Exception as e:
-            error_msg = f"發送提醒時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while sending reminders: {str(e)}"
             print(error_msg)
             return {
                 "success": False,
@@ -676,27 +676,27 @@ class ReminderManager:
 
     async def send_app_reminder(self, user_id: str, message: str) -> Dict[str, Any]:
         """
-        透過 App 內部 API 發送提醒訊息
+        Send reminder message through App internal API
         
         Args:
-            user_id: 用戶ID
-            message: 提醒訊息內容
+            user_id: User ID
+            message: Reminder message content
             
         Returns:
-            Dict[str, Any]: 發送結果
+            Dict[str, Any]: Sending result
         """
         try:
-            # 獲取 chatbot_id
+            # Get chatbot_id
             chatbot_response = supabase_admin.from_("chatbots").select("id").eq("user_id", user_id).single().execute()
             if not chatbot_response.data:
                 return {
                     "success": False,
-                    "message": f"找不到 user_id {user_id} 對應的 chatbot"
+                    "message": f"Cannot find chatbot for user_id {user_id}"
                 }
             
             chatbot_id = chatbot_response.data['id']
             
-            # 構建請求數據
+            # Build request data
             request_data = {
                 "user_id": user_id,
                 "chatbot_id": chatbot_id,
@@ -707,7 +707,7 @@ class ReminderManager:
                 "private_access_token": self.private_access_token
             }
             
-            # 呼叫 push-message API
+            # Call push-message API
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{settings.SITE_URL}/api/v1/chat/push-message",
@@ -719,14 +719,14 @@ class ReminderManager:
                 if response.status_code == 200:
                     result = response.json()
                     if result.get("success"):
-                        print(f"成功透過 App 內部 API 發送提醒訊息，user_id: {user_id}")
+                        print(f"Successfully sent reminder message through App internal API, user_id: {user_id}")
                         return {
                             "success": True,
-                            "message": "提醒訊息發送成功",
+                            "message": "Reminder message sent successfully",
                             "api_response": result
                         }
                     else:
-                        error_msg = f"API 回應顯示失敗：{result.get('message', '未知錯誤')}"
+                        error_msg = f"API response shows failure: {result.get('message', 'Unknown error')}"
                         print(error_msg)
                         return {
                             "success": False,
@@ -734,7 +734,7 @@ class ReminderManager:
                             "api_response": result
                         }
                 else:
-                    error_msg = f"API 呼叫失敗，狀態碼：{response.status_code}, 回應：{response.text}"
+                    error_msg = f"API call failed, status code: {response.status_code}, response: {response.text}"
                     print(error_msg)
                     return {
                         "success": False,
@@ -744,21 +744,21 @@ class ReminderManager:
                     }
                     
         except httpx.TimeoutException:
-            error_msg = "API 呼叫超時"
+            error_msg = "API call timeout"
             print(error_msg)
             return {
                 "success": False,
                 "message": error_msg
             }
         except httpx.RequestError as e:
-            error_msg = f"API 請求錯誤：{str(e)}"
+            error_msg = f"API request error: {str(e)}"
             print(error_msg)
             return {
                 "success": False,
                 "message": error_msg
             }
         except Exception as e:
-            error_msg = f"發送 App 內部提醒時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while sending App internal reminder: {str(e)}"
             print(error_msg)
             return {
                 "success": False,
@@ -767,21 +767,21 @@ class ReminderManager:
 
     async def send_line_reminder(self, user_id: str, message: str) -> Dict[str, Any]:
         """
-        透過 LINE 發送提醒訊息
+        Send reminder message through LINE
         """
         try:
-            # 延遲導入以避免循環導入
+            # Delayed import to avoid circular import
             from app.lib.line.official_account import official_account
             
             line_user_id = official_account.get_line_user_id_by_user_id(user_id)
 
             if line_user_id and official_account.check_line_user_exist(line_user_id):
-                # 使用 LINE Official Account 發送
+                # Send using LINE Official Account
                 official_account.push_message(line_user_id, message)
-                print(f"成功使用 LINE Official Account 發送提醒訊息，line_user_id: {line_user_id}")
+                print(f"Successfully sent reminder message using LINE Official Account, line_user_id: {line_user_id}")
                 return {
                     "success": True,
-                    "message": "提醒訊息發送成功",
+                    "message": "Reminder message sent successfully",
                     "user_id": user_id,
                     "line_user_id": line_user_id,
                     "message": message,
@@ -789,14 +789,14 @@ class ReminderManager:
                 }
                                 
             else:
-                print(f"無法使用 LINE Official Account 發送，line_user_id: {line_user_id}")
+                print(f"Unable to send using LINE Official Account, line_user_id: {line_user_id}")
                 return {
                     "success": False,
-                    "message": "無法取得有效的 LINE 用戶 ID"
+                    "message": "Unable to get valid LINE user ID"
                 }
 
         except Exception as e:
-            error_msg = f"發送 LINE 提醒時發生錯誤：{str(e)}"
+            error_msg = f"Error occurred while sending LINE reminder: {str(e)}"
             print(error_msg)
             return {
                 "success": False,
