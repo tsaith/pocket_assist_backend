@@ -68,6 +68,7 @@ from app.lib.chatbot.tools import (
 )
 
 from app.lib.user_time_manager import UserTimeManager
+from app.lib.user_preference_manager import UserPreferenceManager
 
 
 class ChatbotBase:
@@ -144,6 +145,7 @@ class ChatbotBase:
 
         self.user_id = user_id
         self.user_time_manager = UserTimeManager(user_id)
+        self.user_preference_manager = UserPreferenceManager(user_id)
 
         # 創建獲取用戶時區工具
         get_user_timezone_tool = create_get_user_timezone_tool(user_id)
@@ -315,12 +317,15 @@ class ChatbotBase:
         current_date = self.user_time_manager.get_date()
         current_weekday = self.user_time_manager.get_weekday()
 
+        default_language = self.user_preference_manager.get_user_language()
+
         # 設置提示詞
         self.prompt = f"""
         你的名字是:{chatbot_name}，
         目前時區:{current_timezone}，
         今天日期: {current_date}，
-        今天是: {current_weekday}.
+        今天是: {current_weekday}，
+        預設的交談語言: {default_language}。 
 
         你現在扮演的是一位智能助理，與主人進行對話，並使用使用相同語言回答主人提出的問題，
         ，給予最精確的回覆。

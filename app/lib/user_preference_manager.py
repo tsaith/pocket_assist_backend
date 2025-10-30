@@ -24,7 +24,6 @@ class UserPreferenceManager:
         Returns:
             str: Language code (e.g., 'zh-TW', 'en-US') or error message
         """
-        print(f"Getting language preference for user ID {self.user_id}")
         
         try:
             # Query language from profiles table
@@ -35,8 +34,7 @@ class UserPreferenceManager:
                 print(error_msg)
                 return error_msg
             
-            language = profile_response.data[0].get("language", "zh-TW")
-            print(f"Current language setting: {language}")
+            language = profile_response.data[0].get("language", "en-US")
             
             return language
             
