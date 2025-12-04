@@ -19,18 +19,13 @@ class SubscriptionLimits:
     LIMITS: Dict[str, Dict[str, int]] = {
         'free': {
             'reminders': 5,
-            'notes': 5,
+            'notes': 10,
             'bookkeeping_months': 3
         },
         'pro': {
-            'reminders': 30,
-            'notes': 50,
+            'reminders': 50,
+            'notes': 1000,
             'bookkeeping_months': 12
-        },
-        'vip': {
-            'reminders': 100,
-            'notes': 200,
-            'bookkeeping_months': 36
         },
         'vvip': {
             'reminders': -1,  # -1 means unlimited
