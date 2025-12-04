@@ -31,13 +31,11 @@ from app.lib.chatbot.tools import (
     create_set_user_timezone_tool,
     create_create_note_tool,
     create_read_note_tool,
-    create_read_notes_tool,
     create_search_notes_tool,
     create_search_notes_by_time_tool,
     create_update_note_tool,
     create_delete_note_tool,
     create_search_notes_tool,
-    create_search_memory_tool,
     create_create_bookkeeping_category_tool,
     create_read_bookkeeping_categories_tool,
     create_read_bookkeeping_category_tool,
@@ -186,9 +184,6 @@ class ChatbotBase:
         # 創建讀取單個筆記工具
         read_note_tool = create_read_note_tool(user_id)
         
-        # 創建讀取筆記工具
-        read_notes_tool = create_read_notes_tool(user_id)
-        
         # 創建搜尋筆記工具
         search_notes_tool = create_search_notes_tool(user_id)
         
@@ -200,9 +195,6 @@ class ChatbotBase:
         
         # 創建刪除筆記工具
         delete_note_tool = create_delete_note_tool(user_id)
-        
-        # 創建搜索記憶體工具
-        search_memory_tool = create_search_memory_tool(user_id)
         
         # 創建新增記帳類別工具
         create_bookkeeping_category_tool = create_create_bookkeeping_category_tool(user_id)
@@ -287,9 +279,7 @@ class ChatbotBase:
             create_reminder_tool,
             update_reminder_tool,
             delete_reminder_tool,
-            search_memory_tool,
             read_note_tool,
-            read_notes_tool,
             search_notes_tool,
             search_notes_by_time_tool,
             create_note_tool,
@@ -331,7 +321,7 @@ class ChatbotBase:
         ，給予最精確的回覆。
 
         你的記憶庫儲存著主人所有的筆記資料，當你無法回答主人的問題時，
-        必須要先查詢記憶庫（使用 search_memory 工具），然後再進行回答。
+        必須要先查詢記憶庫，然後再進行回答。
         倘若在記憶庫中沒有找到相關資訊，那就誠實回答我不知道。
         在回答不知道前，必須先確認記憶庫中沒有記載相關資訊，然後再進行回答。
         請確保你的回答基於檢索到的記憶內容，不要編造信息。
