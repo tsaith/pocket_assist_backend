@@ -1,0 +1,1 @@
+npx supabase db dump -f supabase/seed.sql --data-only --local

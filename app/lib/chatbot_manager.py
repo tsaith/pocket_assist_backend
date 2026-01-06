@@ -20,8 +20,8 @@ class ChatbotManager:
         self.lock = threading.RLock()
         
         # Cleanup configuration
-        self.max_idle_time = 28800  # Instances unused for 8 hours will be cleaned up
-        self.cleanup_interval = 600  # Cleanup thread checks every 10 minutes
+        self.max_idle_time = 86400  # Instances unused for 24 hours will be cleaned up
+        self.cleanup_interval = 3600  # Cleanup thread checks every 1 hour
         
         # Cleanup thread control
         self._cleanup_thread = None

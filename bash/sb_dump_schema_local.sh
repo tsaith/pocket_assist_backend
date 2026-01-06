@@ -1,0 +1,1 @@
+npx supabase db dump --local -f supabase/schema.sql --schema public,auth
